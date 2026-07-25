@@ -5,7 +5,7 @@ export function MobilePreview() {
   return (
     <div className="p-6 lg:p-8">
       <div>
-        <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 28, fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+        <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 28, fontWeight: 600 }} className="text-neutral-900 dark:text-white">
           Mobile (390px)
         </h1>
         <p className="text-neutral-500 mt-1" style={{ fontSize: 14 }}>

@@ -26,7 +26,7 @@ export function History() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
       <div>
-        <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+        <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
           {t("history.title")}
         </h1>
         <p className="text-neutral-500 dark:text-neutral-400 mt-1" style={{ fontSize: 14 }}>{t("history.sub")}</p>
@@ -58,7 +58,7 @@ export function History() {
           {/* Grafik tren */}
           <Card className="p-5 lg:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("history.trendTitle")}</h3>
+              <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("history.trendTitle")}</h3>
               <div className="flex items-center gap-4 text-xs text-neutral-500">
                 <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-primary" /> {t("dashboard.metricFocus")}</span>
                 <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-warning" /> {t("dashboard.metricStress")}</span>
@@ -72,7 +72,7 @@ export function History() {
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip contentStyle={{ background: "var(--color-surface-dark, #fff)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, fontSize: 12 }} itemStyle={{ color: "#6b7280" }} />
                   <Line type="monotone" dataKey="focus" stroke="#5B4BE6" strokeWidth={2.5} dot={{ r: 3, fill: "#5B4BE6" }} activeDot={{ r: 5 }} isAnimationActive={false} connectNulls />
-                  <Line type="monotone" dataKey="stress" stroke="#BA7517" strokeWidth={2.5} dot={{ r: 3, fill: "#BA7517" }} activeDot={{ r: 5 }} isAnimationActive={false} connectNulls />
+                  <Line type="monotone" dataKey="stress" stroke="#FF9E45" strokeWidth={2.5} dot={{ r: 3, fill: "#FF9E45" }} activeDot={{ r: 5 }} isAnimationActive={false} connectNulls />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -80,7 +80,7 @@ export function History() {
 
           {/* Daftar per hari (terbaru di atas) */}
           <Card className="p-5 lg:p-6">
-            <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-4">{t("history.listTitle")}</h3>
+            <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-4">{t("history.listTitle")}</h3>
             <div className="space-y-2">
               <div className="grid grid-cols-5 gap-2 px-3 text-xs text-neutral-400 dark:text-neutral-500 font-medium">
                 <span className="col-span-2 inline-flex items-center gap-1.5"><CalendarDays size={13} /> {t("history.colDay")}</span>

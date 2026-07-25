@@ -78,7 +78,7 @@ export function Login({ onEnter }) {
           <div className="w-20 h-20 rounded-3xl bg-white/15 backdrop-blur flex items-center justify-center mb-6 border border-white/20">
             <Eye size={36} className="text-white" />
           </div>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 36, fontWeight: 700, lineHeight: 1.15 }}>
+          <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 36, fontWeight: 700, lineHeight: 1.15 }}>
             {t("login.heroTitle")}
           </h1>
           <p className="mt-4 text-white/80" style={{ fontSize: 15, lineHeight: 1.6 }}>
@@ -97,7 +97,7 @@ export function Login({ onEnter }) {
       <div className="flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           <Logo size={32} />
-          <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 24, fontWeight: 600 }} className="mt-8 text-neutral-900 dark:text-white">
+          <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 24, fontWeight: 600 }} className="mt-8 text-neutral-900 dark:text-white">
             {isSignup ? t("login.createAccount") : t("login.welcomeBack")}
           </h2>
           <p className="text-neutral-500 mt-1" style={{ fontSize: 14 }}>{t("login.tagline")}</p>

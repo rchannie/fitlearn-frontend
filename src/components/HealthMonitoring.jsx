@@ -49,7 +49,7 @@ function CameraFeed({ ws, t }) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("health.cameraFeed")}</h3>
+        <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("health.cameraFeed")}</h3>
         <span className="inline-flex items-center gap-1.5 text-accent text-xs">
           <span className={`w-1.5 h-1.5 rounded-full bg-accent ${status === "running" ? "animate-pulse" : "opacity-40"}`} /> rPPG
         </span>
@@ -159,7 +159,7 @@ export function HealthMonitoring() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+          <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
             {t("health.title")}
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1" style={{ fontSize: 14 }}>
@@ -190,7 +190,7 @@ export function HealthMonitoring() {
 
         {/* Live vitals */}
         <Card className="p-5">
-          <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-5">{t("health.liveVitals")}</h3>
+          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-5">{t("health.liveVitals")}</h3>
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -242,7 +242,7 @@ export function HealthMonitoring() {
 
         {/* Timeline */}
         <Card className="p-5">
-          <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-3">{t("health.timeline")}</h3>
+          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-3">{t("health.timeline")}</h3>
           <div className="overflow-y-auto max-h-96 pr-1">
             {events.length === 0 ? (
               <div className="text-sm text-neutral-400 dark:text-neutral-500 py-8 text-center">{t("health.timelineEmpty")}</div>

@@ -163,7 +163,7 @@ export function Logo({ size = 28 }) {
         <circle cx="16" cy="16" r="4" fill="#FF9E45" />
         <path d="M3 20 L9 20 L11 14 L14 24 L17 12 L20 22 L23 20 L29 20" stroke="#FF9E45" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="text-neutral-900 dark:text-white tracking-tight font-bold" style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 19 }}>
+      <span className="text-neutral-900 dark:text-white tracking-tight font-bold" style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 19 }}>
         FitLearn
       </span>
     </div>

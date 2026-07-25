@@ -87,7 +87,7 @@ export function AIAdvisor({ onTriggerBreak }) {
       <div className="flex items-center gap-2.5">
         <div className="w-9 h-9 rounded-xl bg-accent/12 text-primary dark:text-accent flex items-center justify-center"><Sparkles size={18} /></div>
         <div>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+          <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
             {t("advisor.title")}
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400" style={{ fontSize: 14 }}>{t("advisor.sub")}</p>
@@ -147,7 +147,7 @@ export function AIAdvisor({ onTriggerBreak }) {
           {/* Suggestion cards */}
           {suggestions.length > 0 && (
             <div>
-              <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-3">{t("advisor.suggestionsTitle")}</h3>
+              <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-3">{t("advisor.suggestionsTitle")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {suggestions.map((s, i) => {
                   const Icon = s.icon;

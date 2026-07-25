@@ -42,7 +42,7 @@ export function Onboarding({ onClose }) {
               <X size={16} />
             </button>
           </div>
-          <h4 style={{ fontFamily: "'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-3">
+          <h4 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-3">
             {t(s.titleKey)}
           </h4>
           <p className="text-neutral-500 mt-1.5" style={{ fontSize: 13.5, lineHeight: 1.55 }}>{t(s.bodyKey)}</p>

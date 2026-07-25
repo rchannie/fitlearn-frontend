@@ -113,7 +113,7 @@ export function BreakModal({ open }) {
                 >
                   <CheckCircle2 size={40} />
                 </motion.div>
-                <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+                <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
                   {t("breakModal.timeUpTitle")}
                 </h2>
                 <p className="text-neutral-500 mt-2 max-w-sm" style={{ fontSize: 14, lineHeight: 1.6 }}>
@@ -141,7 +141,7 @@ export function BreakModal({ open }) {
                   <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
                     <circle cx="60" cy="60" r="52" stroke="currentColor" className="text-neutral-200 dark:text-white/10" strokeWidth="8" fill="none" />
                     <motion.circle
-                      cx="60" cy="60" r="52" stroke="#BA7517" strokeWidth="8" fill="none" strokeLinecap="round"
+                      cx="60" cy="60" r="52" stroke="#FF9E45" strokeWidth="8" fill="none" strokeLinecap="round"
                       strokeDasharray={2 * Math.PI * 52}
                       animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - pct) }}
                       transition={{ ease: "linear", duration: 0.9 }}
@@ -154,7 +154,7 @@ export function BreakModal({ open }) {
                     <span className="text-neutral-400 text-xs mt-0.5">{t("breakModal.remaining")}</span>
                   </div>
                 </div>
-                <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+                <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 22, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
                   {t("breakModal.runningTitle")}
                 </h2>
                 <p className="text-neutral-500 mt-2 max-w-sm" style={{ fontSize: 14, lineHeight: 1.6 }}>
@@ -180,7 +180,7 @@ export function BreakModal({ open }) {
                   >
                     <Clock size={40} />
                   </motion.div>
-                  <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+                  <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
                     {t("breakModal.title")}
                   </h2>
                   <p className="text-neutral-500 mt-2 max-w-sm" style={{ fontSize: 14, lineHeight: 1.6 }}>
