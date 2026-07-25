@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FitLearn</title>
+
+    <!-- FitLearn Design System Fonts (Baloo 2 = friendly, rounded display face) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Sora:wght@400;600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Inisialisasi dark mode sebelum React mount untuk menghindari flash -->
+    <script>
+      try {
+        if (JSON.parse(localStorage.getItem("fitlearn-dark-mode"))) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch {}
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

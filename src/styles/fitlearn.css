@@ -1,0 +1,12 @@
+/* FitLearn Design Tokens
+   ----------------------------------------------------------------
+   Seluruh token warna & utility (bg-*, text-*, border-*, from-*, to-*,
+   stroke-*, plus variant dark:* dan modifier opacity) di-generate
+   otomatis oleh Tailwind dari blok `@theme` di src/index.css.
+
+   JANGAN definisikan ulang utility seperti `.bg-bg-dark` secara manual
+   di sini — itu menimpa class statis Tailwind dan MEMATIKAN generasi
+   variant `dark:bg-bg-dark`, menyebabkan dark mode tidak berfungsi.
+
+   File ini sengaja dibiarkan kosong sebagai penanda; tambahkan token
+   baru di `@theme` (src/index.css), bukan di sini. */

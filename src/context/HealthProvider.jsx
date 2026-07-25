@@ -1,0 +1,248 @@
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useNotifications } from "./NotificationProvider";
+
+/**
+ * HealthProvider — SATU sumber data kesehatan untuk seluruh app.
+ *
+ * Transport dipilih otomatis:
+ *   1. WebSocket real-time — bila VITE_WS_URL diset & koneksi ws berhasil.
+ *   2. Polling HTTP        — fallback otomatis.
+ *
+ * PENTING: tidak ada mock/seed. Saat idle (backend mati / belum ada pembacaan),
+ * semua nilai = null dan history = [] → UI menampilkan "--"/kosong, BUKAN angka palsu.
+ *
+ * Kamera (HealthMonitoring) mengirim vitals via setLiveVitals(); provider
+ * meneruskannya ke backend agar skor ML dihitung dari pembacaan nyata.
+ */
+
+const API_URL = import.meta.env.VITE_API_URL;
+const WS_URL = import.meta.env.VITE_WS_URL || null;
+const PERCLOS_THRESHOLD = Number(import.meta.env.VITE_PERCLOS_THRESHOLD) || 0.4;
+const POLL_INTERVAL = 5000;
+const PUSH_INTERVAL = 2000;
+const MAX_HISTORY = 12;
+
+// State kosong — dipakai saat idle. Semua skor/vitals null.
+const EMPTY = {
+  status: "idle",
+  userId: null,
+  timestamp: null,
+  focusScore: null,
+  stressLevel: null,
+  fatigueScore: null,
+  vitals: { heartRate: null, pupilDilation: null, perclos: null },
+  breakWarning: { triggered: false, reason: null, recommendedMinutes: null },
+  sessionInfo: { activeWorkHours: null, deepWorkBlocks: null, breakCompliance: null },
+  source: null,
+};
+
+const HealthContext = createContext(null);
+
+/** Turunkan breakWarning dari skor nyata (hanya bila skor tersedia). */
+function deriveBreakWarning(stressLevel, fatigueScore, activeWorkHours) {
+  if (stressLevel == null && fatigueScore == null) {
+    return { triggered: false, reason: null, recommendedMinutes: null };
+  }
+  const highStress = stressLevel != null && stressLevel > 65;
+  const highFatigue = fatigueScore != null && fatigueScore > 60;
+  const longSession = activeWorkHours != null && activeWorkHours > 2.5;
+  const triggered = highStress || highFatigue || longSession;
+
+  let reason = null;
+  if (highStress && highFatigue) reason = "cognitive_overload";
+  else if (highStress) reason = "stress_index_high";
+  else if (highFatigue) reason = "fatigue_detected";
+  else if (longSession) reason = "long_session";
+
+  return { triggered, reason, recommendedMinutes: triggered ? 10 : null };
+}
+
+/** Normalisasi response backend. Field yang tak ada TETAP null (tanpa mock). */
+function normalize(raw) {
+  const vitals = { ...EMPTY.vitals, ...(raw.vitals || {}) };
+  const sessionInfo = { ...EMPTY.sessionInfo, ...(raw.sessionInfo || {}) };
+  const focusScore = raw.focusScore ?? null;
+  const stressLevel = raw.stressLevel ?? null;
+  const fatigueScore = raw.fatigueScore ?? null;
+
+  const breakWarning =
+    raw.breakWarning || deriveBreakWarning(stressLevel, fatigueScore, sessionInfo.activeWorkHours);
+
+  return {
+    status: raw.status || "ok",
+    userId: raw.userId || null,
+    timestamp: raw.timestamp || new Date().toISOString(),
+    focusScore,
+    stressLevel,
+    fatigueScore,
+    vitals,
+    breakWarning,
+    sessionInfo,
+    source: raw.source || (raw.vitals ? "live" : "baseline"),
+  };
+}
+
+function clockLabel(ts) {
+  const d = ts ? new Date(ts) : new Date();
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function vitalsBody(v) {
+  if (!v) return undefined;
+  return JSON.stringify({
+    heartRate: v.heartRate,
+    perclos: v.perclos,
+    pupilDilation: v.pupilDilation,
+    blinkRate: v.blinkRate,
+    isSlumping: v.isSlumping ? 1 : 0,
+    facialTension: v.expression ? v.expression.tension : undefined,
+    // Lama sesi kerja nyata (jam) → backend tak memakai default 5.4 lagi.
+    activeWorkHours: v.sessionHours,
+  });
+}
+
+export function HealthProvider({ children }) {
+  const { pushAlert } = useNotifications();
+  const [data, setData] = useState(EMPTY);
+  const [history, setHistory] = useState([]);
+  const [isLive, setIsLive] = useState(false);
+  const [transport, setTransport] = useState("offline");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [error, setError] = useState(null);
+
+  const timer = useRef(null);
+  const vitalsRef = useRef(null);
+  const setLiveVitals = useCallback((v) => { vitalsRef.current = v; }, []);
+
+  // Evaluasi alert dari data nyata (hanya bila skor tersedia).
+  // pushAlert stabil (useCallback []) → aman jadi dependensi.
+  const evaluateAlerts = useCallback((n) => {
+    if (n.breakWarning?.triggered) pushAlert("break", { min: n.breakWarning.recommendedMinutes ?? 10 });
+    if (n.stressLevel != null && n.stressLevel > 65) pushAlert("stress", { v: Math.round(n.stressLevel) });
+    if (n.vitals.perclos != null && n.vitals.perclos > PERCLOS_THRESHOLD) pushAlert("eye", { v: n.vitals.perclos });
+  }, [pushAlert]);
+
+  useEffect(() => {
+    let active = true;
+    let socket = null;
+    let pushTimer = null;
+
+    function commit(json) {
+      if (!active || !json || json.status === "error") return;
+      const normalized = normalize(json);
+      setData(normalized);
+      setIsLive(true);
+      setError(null);
+      setLastUpdated(new Date());
+      evaluateAlerts(normalized);
+      setHistory((prev) => {
+        const next = [
+          ...prev,
+          {
+            t: clockLabel(normalized.timestamp),
+            productivity: normalized.focusScore != null ? Math.round(normalized.focusScore) : null,
+            stress: normalized.stressLevel != null ? Math.round(normalized.stressLevel) : null,
+          },
+        ];
+        return next.slice(-MAX_HISTORY);
+      });
+    }
+
+    // WebSocket real-time (pengganti SignalR): buka koneksi ke FastAPI /ws/vitals,
+    // kirim vitals kamera tiap PUSH_INTERVAL, terima skor ML dari server.
+    function startWebSocket() {
+      return new Promise((resolve) => {
+        try {
+          socket = new WebSocket(WS_URL);
+        } catch (e) {
+          console.warn("[HealthProvider] WebSocket gagal dibuat, fallback polling:", e?.message);
+          resolve(false);
+          return;
+        }
+
+        const sendVitals = () => {
+          const v = vitalsRef.current;
+          if (!v || socket?.readyState !== WebSocket.OPEN) return;
+          try { socket.send(vitalsBody(v)); } catch { /* reconnect via fallback */ }
+        };
+
+        socket.onopen = () => {
+          if (!active) { try { socket.close(); } catch { /* abaikan */ } return; }
+          setTransport("websocket");
+          sendVitals();
+          pushTimer = setInterval(sendVitals, PUSH_INTERVAL);
+          resolve(true);
+        };
+        socket.onmessage = (ev) => {
+          try { commit(JSON.parse(ev.data)); } catch { /* abaikan frame rusak */ }
+        };
+        socket.onerror = () => {
+          // Bila gagal sebelum open, resolve(false) → fallback polling.
+          console.warn("[HealthProvider] WebSocket error, fallback polling");
+          resolve(false);
+        };
+      });
+    }
+
+    async function poll() {
+      const v = vitalsRef.current;
+      // Idle = belum ada sesi kamera → JANGAN tarik baseline. Biarkan benar-benar kosong.
+      if (!v) { if (active) setIsLive(false); return; }
+      if (!API_URL) { if (active) { setIsLive(false); setTransport("offline"); } return; }
+      try {
+        const controller = new AbortController();
+        const to = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(API_URL, {
+          method: "POST",
+          // Content-Type text/plain + hanya header CORS-safelisted → tidak memicu
+          // preflight OPTIONS (yang ditolak backend). Body tetap JSON; backend
+          // membaca via req.get_json() yang tak peduli Content-Type.
+          headers: { Accept: "application/json", "Content-Type": "text/plain" },
+          body: vitalsBody(v),
+          signal: controller.signal,
+        });
+        clearTimeout(to);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        commit(await res.json());
+      } catch (e) {
+        if (!active) return;
+        setIsLive(false);
+        setError(e.message || "fetch failed");
+      }
+    }
+
+    function startPolling() {
+      setTransport("polling");
+      poll();
+      timer.current = setInterval(poll, POLL_INTERVAL);
+    }
+
+    (async () => {
+      const usedWebSocket = WS_URL ? await startWebSocket() : false;
+      if (active && !usedWebSocket) startPolling();
+    })();
+
+    return () => {
+      active = false;
+      if (timer.current) clearInterval(timer.current);
+      if (pushTimer) clearInterval(pushTimer);
+      try { socket?.close?.(); } catch { /* abaikan */ }
+    };
+  }, [evaluateAlerts]);
+
+  const value = useMemo(
+    () => ({ data, history, isLive, transport, lastUpdated, error, setLiveVitals }),
+    [data, history, isLive, transport, lastUpdated, error, setLiveVitals]
+  );
+
+  return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
+}
+
+export function useHealth() {
+  const ctx = useContext(HealthContext);
+  if (!ctx) throw new Error("useHealth harus dipakai di dalam <HealthProvider>");
+  return ctx;
+}
+
+export default HealthProvider;

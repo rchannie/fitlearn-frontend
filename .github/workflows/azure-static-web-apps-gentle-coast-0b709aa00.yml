@@ -1,0 +1,54 @@
+name: Azure Static Web Apps CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+
+jobs:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        env:
+          # Vite meng-inline VITE_* saat build. Nilai ditulis langsung karena
+          # tak punya akses GitHub Secrets. Anon key & URL ini PUBLIK (ikut ke
+          # bundle browser, diproteksi Row Level Security) → aman di repo.
+          VITE_SUPABASE_URL: "https://svsabktzdcqmkfwxldeb.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2c2Fia3R6ZGNxbWtmd3hsZGViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1ODQ4NzUsImV4cCI6MjA5NjE2MDg3NX0.v0dAEjH3swayd_rrP0tY6_COz8z0Lvt70XJ7Ta7CgiE"
+          VITE_API_URL: "https://fitwork-app-hqera6b4ashga8gy.southeastasia-01.azurewebsites.net/api/healthscore"
+          VITE_SIGNALR_ENABLED: "true"
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_COAST_0B709AA00 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          action: "upload"
+          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
+          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          app_location: "/" # App source code path
+          api_location: "" # Api source code path - optional
+          output_location: "dist" # Built app content directory - optional
+          ###### End of Repository/Build Configurations ######
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_COAST_0B709AA00 }}
+          action: "close"

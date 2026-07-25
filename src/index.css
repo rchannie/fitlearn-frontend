@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@import "./styles/fitlearn.css";
+
+/* Dark mode dikendalikan oleh class `.dark` di <html>, BUKAN tema OS.
+   Tanpa class ini, `dark:` default mengikuti prefers-color-scheme (tema OS),
+   sehingga app ikut gelap walau toggle off. */
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* FitLearn Brand Colors — school-friendly, bright & playful.
+     Primary indigo/violet + warm amber accent; softer, sunnier surfaces. */
+  --color-primary:        #5B4BE6;   /* friendly indigo-violet */
+  --color-accent:         #FF9E45;   /* warm amber — playful highlight */
+  --color-warning:        #F4A522;   /* sunny amber */
+  --color-danger:         #FF5C7A;   /* soft coral-pink (gentler than red) */
+  --color-bg-light:       #F6F5FF;   /* airy lilac-white */
+  --color-bg-dark:        #171429;   /* deep indigo-navy */
+
+  /* Surface & interaction tokens */
+  --color-surface-light:  #FBFAFF;
+  --color-surface-dark:   #221D3D;
+  --color-primary-hover:  #4B3DD1;
+  --color-primary-active: #3E32B0;
+  --color-primary-light:  #ECE9FF;
+  --color-elevation-dark: #2B2450;
+  --color-accent-hover:   #F58A2A;
+  --color-accent-light:   #FFF1E2;
+
+  /* Playful extras */
+  --color-fun:            #22C7B8;   /* mint — secondary pop for badges/charts */
+  --color-fun-light:      #E3FBF7;
+
+  /* Rounder-by-default radius scale (softer, school-friendly corners) */
+  --radius-lg:  1.1rem;
+  --radius-xl:  1.4rem;
+  --radius-2xl: 1.9rem;
+  --radius-3xl: 2.4rem;
+
+  /* Typography — friendlier, rounder display face (Baloo 2 w/ Sora fallback) */
+  --font-display: "Baloo 2", "Sora", system-ui, sans-serif;
+  --font-body:    "Inter", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ── Reset & Base ─────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Headings use the friendly rounded display face (Baloo 2 → Sora fallback) */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-family: "Baloo 2", "Sora", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0; }
+
+/* ── Scrollbar styling ────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+.dark ::-webkit-scrollbar-thumb { background: #374151; }
