@@ -53,7 +53,7 @@ export function ActivityMonitor() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+          <h1 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 700 }} className="text-neutral-900 dark:text-white">
             {t("activity.title")}
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 mt-1" style={{ fontSize: 14 }}>
@@ -67,7 +67,7 @@ export function ActivityMonitor() {
 
         {/* Status fokus saat ini */}
         <Card className="p-5 xl:col-span-1">
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">
             {t("activity.focusStatus")}
           </h3>
           <div className="mt-4 flex flex-col items-center text-center">
@@ -96,7 +96,7 @@ export function ActivityMonitor() {
 
         {/* Hitungan input */}
         <Card className="p-5 xl:col-span-2">
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-4">
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white mb-4">
             {t("activity.inputCounts")}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -127,7 +127,7 @@ export function ActivityMonitor() {
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <Coffee size={16} className="text-accent" />
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("activity.howTitle")}</h3>
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("activity.howTitle")}</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="rounded-2xl p-4 bg-warning/8 border border-warning/25">

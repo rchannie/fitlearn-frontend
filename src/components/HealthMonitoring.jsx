@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { Heart, Eye, Zap, Camera as CameraIcon, CameraOff, Loader2 } from "lucide-react";
-import { Card, GaugeRing, StatusPill, TimelineItem } from "./shared";
+import { Heart, Eye, Zap, Camera as CameraIcon, CameraOff, Loader2, HeartPulse } from "lucide-react";
+import { Card, GaugeRing, StatusPill, TimelineItem, PageHeader } from "./shared";
 import { useHealth } from "../context/HealthProvider";
 import { useWorkSession } from "../context/WorkSessionProvider";
 import { useT } from "../i18n/LanguageProvider";
@@ -49,7 +49,7 @@ function CameraFeed({ ws, t }) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("health.cameraFeed")}</h3>
+        <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("health.cameraFeed")}</h3>
         <span className="inline-flex items-center gap-1.5 text-accent text-xs">
           <span className={`w-1.5 h-1.5 rounded-full bg-accent ${status === "running" ? "animate-pulse" : "opacity-40"}`} /> rPPG
         </span>
@@ -157,24 +157,21 @@ export function HealthMonitoring() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
-            {t("health.title")}
-          </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1" style={{ fontSize: 14 }}>
-            {isLive
-              ? t("health.subLive", { transport: transportLabel, cam: camLive ? t("health.cameraSuffix") : "" })
-              : t("health.subIdle")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {hasScores && <StatusPill status={stressLevel > 65 ? "alert" : "normal"} label={stressLevel > 65 ? t("status.highStress") : t("status.normal")} />}
-          {perclos != null && perclos > PERCLOS_THRESHOLD && <StatusPill status="warning" label={t("status.eyeStrain")} />}
-          {fv.isSlumping && <StatusPill status="warning" label={t("status.slumping")} />}
-          {fv.expression && fv.expression.tension > 0.5 && <StatusPill status="warning" label={t("status.facialTension")} />}
-        </div>
-      </div>
+      <PageHeader
+        icon={<HeartPulse size={24} />}
+        title={t("health.title")}
+        subtitle={isLive
+          ? t("health.subLive", { transport: transportLabel, cam: camLive ? t("health.cameraSuffix") : "" })
+          : t("health.subIdle")}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {hasScores && <StatusPill status={stressLevel > 65 ? "alert" : "normal"} label={stressLevel > 65 ? t("status.highStress") : t("status.normal")} />}
+            {perclos != null && perclos > PERCLOS_THRESHOLD && <StatusPill status="warning" label={t("status.eyeStrain")} />}
+            {fv.isSlumping && <StatusPill status="warning" label={t("status.slumping")} />}
+            {fv.expression && fv.expression.tension > 0.5 && <StatusPill status="warning" label={t("status.facialTension")} />}
+          </div>
+        }
+      />
 
       {/* Banner saat kamera aktif tapi wajah tidak terdeteksi */}
       {ws.status === "no-face" && (
@@ -190,7 +187,7 @@ export function HealthMonitoring() {
 
         {/* Live vitals */}
         <Card className="p-5">
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-5">{t("health.liveVitals")}</h3>
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white mb-5">{t("health.liveVitals")}</h3>
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -242,7 +239,7 @@ export function HealthMonitoring() {
 
         {/* Timeline */}
         <Card className="p-5">
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-3">{t("health.timeline")}</h3>
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white mb-3">{t("health.timeline")}</h3>
           <div className="overflow-y-auto max-h-96 pr-1">
             {events.length === 0 ? (
               <div className="text-sm text-neutral-400 dark:text-neutral-500 py-8 text-center">{t("health.timelineEmpty")}</div>

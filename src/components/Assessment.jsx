@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { ClipboardCheck, Brain, Activity, Frown, ArrowRight, RotateCcw, Sparkles } from "lucide-react";
-import { Card, PrimaryButton, GhostButton } from "./shared";
+import { Card, PrimaryButton, GhostButton, PageHeader } from "./shared";
 import { useT } from "../i18n/LanguageProvider";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -148,21 +148,14 @@ export function Assessment() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6 max-w-5xl">
-      <div>
-        <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
-          {t("assessment.title")}
-        </h1>
-        <p className="text-neutral-500 dark:text-neutral-400 mt-1" style={{ fontSize: 14 }}>
-          {t("assessment.sub")}
-        </p>
-      </div>
+      <PageHeader icon={<ClipboardCheck size={24} />} title={t("assessment.title")} subtitle={t("assessment.sub")} />
 
       {/* ── Hasil ── */}
       {result && (
         <Card className="p-5 lg:p-6">
           <div className="flex items-center gap-2 mb-4">
             <ClipboardCheck size={18} className="text-accent" />
-            <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("assessment.results")}</h3>
+            <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("assessment.results")}</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {["depression", "anxiety", "stress"].map((s) => {
@@ -209,7 +202,7 @@ export function Assessment() {
         <>
           <Card className="p-5 lg:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("assessment.questionnaire")}</h3>
+              <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("assessment.questionnaire")}</h3>
               <span className="text-xs text-neutral-400 font-mono">{answered}/21</span>
             </div>
             <div className="h-1.5 rounded-full bg-neutral-100 dark:bg-white/5 overflow-hidden mb-5">
@@ -246,7 +239,7 @@ export function Assessment() {
 
           {/* Faktor hidup (opsional, untuk AI) */}
           <Card className="p-5 lg:p-6">
-            <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-1">{t("assessment.lifeContext")} <span className="text-neutral-400 font-normal text-sm">{t("assessment.lifeContextHint")}</span></h3>
+            <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white mb-1">{t("assessment.lifeContext")} <span className="text-neutral-400 font-normal text-sm">{t("assessment.lifeContextHint")}</span></h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               {lifeFactors.map((f) => (
                 <div key={f.key}>

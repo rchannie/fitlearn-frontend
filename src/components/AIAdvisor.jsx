@@ -1,5 +1,5 @@
 import { Sparkles, AlertTriangle, CheckCircle2, Coffee, Eye, Wind, Droplet, Brain, ArrowRight, Inbox, Activity, Zap } from "lucide-react";
-import { Card, GaugeRing } from "./shared";
+import { Card, GaugeRing, PageHeader } from "./shared";
 import { useHealth } from "../context/HealthProvider";
 import { useT } from "../i18n/LanguageProvider";
 
@@ -84,15 +84,7 @@ export function AIAdvisor({ onTriggerBreak }) {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
-      <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl bg-accent/12 text-primary dark:text-accent flex items-center justify-center"><Sparkles size={18} /></div>
-        <div>
-          <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
-            {t("advisor.title")}
-          </h1>
-          <p className="text-neutral-500 dark:text-neutral-400" style={{ fontSize: 14 }}>{t("advisor.sub")}</p>
-        </div>
-      </div>
+      <PageHeader icon={<Sparkles size={24} />} title={t("advisor.title")} subtitle={t("advisor.sub")} />
 
       {!hasData ? (
         <Card className="p-10 flex flex-col items-center justify-center text-center gap-3">
@@ -147,7 +139,7 @@ export function AIAdvisor({ onTriggerBreak }) {
           {/* Suggestion cards */}
           {suggestions.length > 0 && (
             <div>
-              <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white mb-3">{t("advisor.suggestionsTitle")}</h3>
+              <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white mb-3">{t("advisor.suggestionsTitle")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {suggestions.map((s, i) => {
                   const Icon = s.icon;

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Brain, Dumbbell, Apple, Moon, Share2, Download, AlertTriangle, Coffee, Inbox, Check } from "lucide-react";
+import { Brain, Dumbbell, Apple, Moon, Share2, Download, AlertTriangle, Coffee, Inbox, Check, Lightbulb } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
-import { Card, PrimaryButton, GhostButton } from "./shared";
+import { Card, PrimaryButton, GhostButton, PageHeader } from "./shared";
 import { useHealth } from "../context/HealthProvider";
 import { useT } from "../i18n/LanguageProvider";
 
@@ -82,12 +82,7 @@ export function Recommendations() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
-      <div>
-        <h1 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 600 }} className="text-neutral-900 dark:text-white">
-          {t("recommendations.title")}
-        </h1>
-        <p className="text-neutral-500 dark:text-neutral-400 mt-1" style={{ fontSize: 14 }}>{t("recommendations.sub")}</p>
-      </div>
+      <PageHeader icon={<Lightbulb size={24} />} title={t("recommendations.title")} subtitle={t("recommendations.sub")} />
 
       {!hasData ? (
         <Card className="p-10 flex flex-col items-center justify-center text-center gap-3">
@@ -274,7 +269,7 @@ function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, 
         </Card>
 
         <Card className="p-5 lg:p-6">
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{t("recommendations.wellnessProfile")}</h3>
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("recommendations.wellnessProfile")}</h3>
           <p className="text-neutral-400 dark:text-neutral-500 mt-1 text-sm">{t("recommendations.wellnessSub")}</p>
           <div className="h-64 mt-2">
             <ResponsiveContainer width="100%" height="100%">

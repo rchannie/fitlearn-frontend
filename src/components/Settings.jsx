@@ -35,11 +35,11 @@ export function Settings() {
       {/* Profile card */}
       <Card className="p-5 lg:p-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-accent flex items-center justify-center text-white shrink-0" style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 700 }}>
+          <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-primary to-accent flex items-center justify-center text-white shrink-0" style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 700 }}>
             {initials}
           </div>
           <div>
-            <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{displayName}</h2>
+            <h2 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{displayName}</h2>
             {profile?.email && (
               <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-0.5">
                 {profile.jobTitle || profile.email}
@@ -189,7 +189,7 @@ function BreakDurationSettings({ t }) {
 function SectionHeader({ title, desc }) {
   return (
     <div>
-      <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 600 }} className="text-neutral-900 dark:text-white">{title}</h3>
+      <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 17, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{title}</h3>
       <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">{desc}</p>
     </div>
   );

@@ -99,7 +99,7 @@ export default function App() {
                 <button
                   key={n.id}
                   onClick={() => setScreen(n.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition-all active:scale-[0.98]
                     ${active
                       ? "bg-primary/10 text-primary font-semibold dark:bg-accent/15 dark:text-accent"
                       : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-800 dark:hover:text-white"
@@ -139,7 +139,7 @@ export default function App() {
                   {mobileNav ? <X size={20} /> : <Menu size={20} />}
                 </button>
                 <div className="lg:hidden"><Logo /></div>
-                <h2 className="hidden lg:block text-neutral-700 dark:text-neutral-200" style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 600 }}>
+                <h2 className="hidden lg:block text-neutral-700 dark:text-neutral-200" style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 16, fontWeight: 700 }}>
                   {t(`nav.${screen}`)}
                 </h2>
               </div>
@@ -254,7 +254,7 @@ export default function App() {
                     <button
                       key={n.id}
                       onClick={() => { setScreen(n.id); setMobileNav(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition-all active:scale-[0.98]
                         ${active
                           ? "bg-primary/10 text-primary font-semibold dark:bg-accent/15 dark:text-accent"
                           : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-800 dark:hover:text-white"

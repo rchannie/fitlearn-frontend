@@ -139,15 +139,16 @@ export function buildQuests(today, breaksToday = 0) {
 
 // ── Badge (pencapaian) ───────────────────────────────────────────
 // Tiap badge: {id, emoji, threshold-check}. `unlocked` dihitung dari agregat.
+// Ikon di-render di layer komponen (id → lucide icon), file ini tetap bebas JSX.
 export const BADGE_DEFS = [
-  { id: "firstStep", emoji: "🌱", test: (a) => a.daysActive >= 1 },
-  { id: "focused", emoji: "🎯", test: (a) => a.bestFocus >= 80 },
-  { id: "streak3", emoji: "🔥", test: (a) => a.bestStreak >= 3 },
-  { id: "streak7", emoji: "⚡", test: (a) => a.bestStreak >= 7 },
-  { id: "marathon", emoji: "📚", test: (a) => a.totalHours >= 10 },
-  { id: "calm", emoji: "😌", test: (a) => a.bestCalm >= 80 },
-  { id: "level5", emoji: "🏅", test: (a) => a.level >= 5 },
-  { id: "level10", emoji: "👑", test: (a) => a.level >= 10 },
+  { id: "firstStep", test: (a) => a.daysActive >= 1 },
+  { id: "focused", test: (a) => a.bestFocus >= 80 },
+  { id: "streak3", test: (a) => a.bestStreak >= 3 },
+  { id: "streak7", test: (a) => a.bestStreak >= 7 },
+  { id: "marathon", test: (a) => a.totalHours >= 10 },
+  { id: "calm", test: (a) => a.bestCalm >= 80 },
+  { id: "level5", test: (a) => a.level >= 5 },
+  { id: "level10", test: (a) => a.level >= 10 },
 ];
 
 /** Ringkas riwayat jadi agregat untuk pengecekan badge. */
@@ -166,7 +167,7 @@ export function aggregate(history = []) {
 
 export function computeBadges(history, streakBest, level) {
   const agg = { ...aggregate(history), bestStreak: streakBest, level };
-  return BADGE_DEFS.map((b) => ({ id: b.id, emoji: b.emoji, unlocked: b.test(agg) }));
+  return BADGE_DEFS.map((b) => ({ id: b.id, unlocked: b.test(agg) }));
 }
 
 /**

@@ -54,7 +54,7 @@ export function MobileDashboard({ onTriggerBreak }) {
         <div className="flex items-center gap-3">
           <GaugeRing value={focus} size={80} status={focus >= 70 ? "normal" : "warning"} />
           <div>
-            <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 600 }} className="text-neutral-900 dark:text-white">
+            <h2 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 600 }} className="text-neutral-900 dark:text-white">
               Hi, Raditya
             </h2>
             <p className="text-neutral-500 mt-0.5" style={{ fontSize: 12.5, lineHeight: 1.5 }}>
@@ -81,7 +81,7 @@ export function MobileDashboard({ onTriggerBreak }) {
 
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 14, fontWeight: 600 }} className="text-neutral-900 dark:text-white">Focus trend</h3>
+            <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 14, fontWeight: 600 }} className="text-neutral-900 dark:text-white">Focus trend</h3>
             <span className="text-neutral-500" style={{ fontSize: 11 }}>Last 8 hours</span>
           </div>
           <div className="h-20">

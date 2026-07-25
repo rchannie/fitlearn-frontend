@@ -13,7 +13,7 @@ export function MobileBreak() {
           >
             <Clock size={30} />
           </motion.div>
-          <h3 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-4">
+          <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 20, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-4">
             Time for a Break
           </h3>
           <p className="text-neutral-500 mt-2" style={{ fontSize: 13, lineHeight: 1.55 }}>

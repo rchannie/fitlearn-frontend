@@ -113,7 +113,7 @@ export function BreakModal({ open }) {
                 >
                   <CheckCircle2 size={40} />
                 </motion.div>
-                <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+                <h2 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
                   {t("breakModal.timeUpTitle")}
                 </h2>
                 <p className="text-neutral-500 mt-2 max-w-sm" style={{ fontSize: 14, lineHeight: 1.6 }}>
@@ -154,7 +154,7 @@ export function BreakModal({ open }) {
                     <span className="text-neutral-400 text-xs mt-0.5">{t("breakModal.remaining")}</span>
                   </div>
                 </div>
-                <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 22, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+                <h2 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 22, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
                   {t("breakModal.runningTitle")}
                 </h2>
                 <p className="text-neutral-500 mt-2 max-w-sm" style={{ fontSize: 14, lineHeight: 1.6 }}>
@@ -180,7 +180,7 @@ export function BreakModal({ open }) {
                   >
                     <Clock size={40} />
                   </motion.div>
-                  <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+                  <h2 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 26, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
                     {t("breakModal.title")}
                   </h2>
                   <p className="text-neutral-500 mt-2 max-w-sm" style={{ fontSize: 14, lineHeight: 1.6 }}>

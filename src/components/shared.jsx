@@ -9,7 +9,7 @@ const statusColors = {
 
 export function Card({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl bg-white dark:bg-surface-dark border border-neutral-200 dark:border-white/8 shadow-sm dark:shadow-none ${className}`}>
+    <div className={`rounded-3xl bg-white dark:bg-surface-dark border border-neutral-200 dark:border-white/8 shadow-sm dark:shadow-none ${className}`}>
       {children}
     </div>
   );
@@ -17,7 +17,7 @@ export function Card({ children, className = "" }) {
 
 export function HoverCard({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl bg-white dark:bg-surface-dark border border-neutral-200 dark:border-white/8 shadow-sm dark:shadow-none hover:border-accent/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all cursor-pointer ${className}`}>
+    <div className={`rounded-3xl bg-white dark:bg-surface-dark border border-neutral-200 dark:border-white/8 shadow-sm dark:shadow-none hover:border-accent/40 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all cursor-pointer ${className}`}>
       {children}
     </div>
   );
@@ -39,7 +39,7 @@ export function MetricCard({ label, value, unit, delta, status = "normal", icon 
           {delta && <div className={`${c.text} text-xs`}>{delta}</div>}
         </div>
         {icon && (
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${c.bg} ${c.text}`}>{icon}</div>
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${c.bg} ${c.text}`}>{icon}</div>
         )}
       </div>
     </HoverCard>
@@ -155,6 +155,29 @@ export function StatusPill({ status, label }) {
   );
 }
 
+/** Header halaman student-friendly: ikon dalam chip gradient + judul Baloo + subjudul. */
+export function PageHeader({ icon, title, subtitle, action }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-3">
+        {icon && (
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm"
+            style={{ background: "linear-gradient(135deg, #6C5CE7 0%, #5B4BE6 55%, #8E7BFF 100%)" }}>
+            {icon}
+          </div>
+        )}
+        <div>
+          <h1 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: "clamp(20px,4vw,28px)", fontWeight: 700 }} className="text-neutral-900 dark:text-white leading-tight">
+            {title}
+          </h1>
+          {subtitle && <p className="text-neutral-500 dark:text-neutral-400 mt-0.5" style={{ fontSize: 14 }}>{subtitle}</p>}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
 export function Logo({ size = 28 }) {
   return (
     <div className="flex items-center gap-2">
@@ -163,7 +186,7 @@ export function Logo({ size = 28 }) {
         <circle cx="16" cy="16" r="4" fill="#FF9E45" />
         <path d="M3 20 L9 20 L11 14 L14 24 L17 12 L20 22 L23 20 L29 20" stroke="#FF9E45" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="text-neutral-900 dark:text-white tracking-tight font-bold" style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 19 }}>
+      <span className="text-neutral-900 dark:text-white tracking-tight font-bold" style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 19 }}>
         FitLearn
       </span>
     </div>

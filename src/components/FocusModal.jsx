@@ -44,7 +44,7 @@ export function FocusModal({ open, reason, onDismiss, onTakeBreak }) {
               <Icon size={30} />
             </motion.div>
 
-            <h2 style={{ fontFamily: "'Baloo 2', 'Baloo 2', 'Sora', sans-serif", fontSize: 22, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
+            <h2 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 22, fontWeight: 600 }} className="text-neutral-900 dark:text-white mt-5">
               {t("focus.title")}
             </h2>
             <p className="text-neutral-600 dark:text-neutral-300 mt-2 text-sm leading-relaxed">{t(r.key)}</p>

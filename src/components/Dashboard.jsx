@@ -1,7 +1,22 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { WifiOff, ChevronRight, AlertTriangle, Coffee } from "lucide-react";
+import {
+  WifiOff, ChevronRight, Coffee, Brain, Smile, Timer, Target, Gamepad2, Trophy,
+  TrendingUp, BarChart3, Rocket, Check, Sprout, Flame, Zap, BookOpen, Medal, Crown,
+} from "lucide-react";
 import { Card } from "./shared";
 import { HeroPanel, LevelBar, StreakCard, StatCard, QuestRow, BadgeShelf, SectionTitle } from "./gamified";
+
+// id badge → ikon lucide (dipisah dari lib gamification agar lib bebas JSX)
+const BADGE_ICONS = {
+  firstStep: <Sprout size={22} />,
+  focused: <Target size={22} />,
+  streak3: <Flame size={22} />,
+  streak7: <Zap size={22} />,
+  marathon: <BookOpen size={22} />,
+  calm: <Smile size={22} />,
+  level5: <Medal size={22} />,
+  level10: <Crown size={22} />,
+};
 import { useHealth } from "../context/HealthProvider";
 import { useDailyStats } from "../context/DailyStatsProvider";
 import { useWorkSession } from "../context/WorkSessionProvider";
@@ -44,12 +59,13 @@ export function Dashboard({ onTriggerBreak, onViewHistory, onOpenActivity }) {
   const heroSub = hasData ? (displayFocus >= 70 ? t("game.subFlow") : t("game.subBring")) : t("game.subReady");
 
   const questMeta = {
-    focus: { emoji: "🎯", title: t("game.questFocus", { n: quests[0].target }) },
-    hours: { emoji: "⏱️", title: t("game.questHours", { n: quests[1].target }) },
-    breaks: { emoji: "☕", title: t("game.questBreaks", { n: quests[2].target }) },
+    focus: { icon: <Target size={18} />, title: t("game.questFocus", { n: quests[0].target }) },
+    hours: { icon: <Timer size={18} />, title: t("game.questHours", { n: quests[1].target }) },
+    breaks: { icon: <Coffee size={18} />, title: t("game.questBreaks", { n: quests[2].target }) },
   };
   const questLabels = { unitHours: t("game.unitHours") };
   const nameOf = (id) => t(`game.badgeNames.${id}`);
+  const badgesWithIcons = badges.map((b) => ({ ...b, icon: BADGE_ICONS[b.id] }));
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
@@ -80,7 +96,7 @@ export function Dashboard({ onTriggerBreak, onViewHistory, onOpenActivity }) {
         <Card className="p-4 border-warning/40 bg-warning/8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-warning/15 text-warning flex items-center justify-center shrink-0 text-xl">☕</div>
+              <div className="w-10 h-10 rounded-2xl bg-warning/15 text-warning flex items-center justify-center shrink-0"><Coffee size={18} /></div>
               <div>
                 <div className="text-neutral-900 dark:text-white font-semibold text-sm">{t("dashboard.breakRecommended")}</div>
                 <p className="text-neutral-500 dark:text-neutral-400 text-xs mt-0.5">
@@ -105,21 +121,21 @@ export function Dashboard({ onTriggerBreak, onViewHistory, onOpenActivity }) {
             labels={{ days: t("game.days"), streak: t("game.streak"), best: t("game.best"), startToday: t("game.startToday"), doneToday: t("game.doneToday") }}
           />
         </div>
-        <StatCard emoji="🧠" label={t("game.statFocus")} value={r(displayFocus)} unit="/100" tone="primary" />
-        <StatCard emoji="😌" label={t("game.statCalm")} value={calm == null ? "--" : calm} unit="%" tone="fun" />
-        <StatCard emoji="⏱️" label={t("game.statHours")} value={displayHours != null ? `${(displayHours || 0).toFixed(1)}` : "--"} unit={t("game.unitHours")} tone="accent" />
+        <StatCard icon={<Brain size={20} />} label={t("game.statFocus")} value={r(displayFocus)} unit="/100" tone="primary" />
+        <StatCard icon={<Smile size={20} />} label={t("game.statCalm")} value={calm == null ? "--" : calm} unit="%" tone="fun" />
+        <StatCard icon={<Timer size={20} />} label={t("game.statHours")} value={displayHours != null ? `${(displayHours || 0).toFixed(1)}` : "--"} unit={t("game.unitHours")} tone="accent" />
       </div>
 
       {/* ══ Quest harian + Badge ══ */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 lg:gap-6">
         <Card className="xl:col-span-2 p-5 lg:p-6">
-          <SectionTitle emoji="🎮">{t("game.quests")}</SectionTitle>
+          <SectionTitle icon={<Gamepad2 size={20} />}>{t("game.quests")}</SectionTitle>
           <p className="text-neutral-400 dark:text-neutral-500 text-sm -mt-2 mb-4">{t("game.questsSub")}</p>
           <div className="space-y-2.5">
             {quests.map((q) => (
               <QuestRow
                 key={q.id}
-                emoji={questMeta[q.id].emoji}
+                icon={questMeta[q.id].icon}
                 title={questMeta[q.id].title}
                 current={q.current}
                 target={q.target}
@@ -127,32 +143,33 @@ export function Dashboard({ onTriggerBreak, onViewHistory, onOpenActivity }) {
                 progress={q.progress}
                 done={q.done}
                 labels={questLabels}
+                CheckIcon={Check}
               />
             ))}
           </div>
           {!workActive && (
             <button
               onClick={onOpenActivity}
-              className="mt-4 w-full py-3 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm active:scale-[0.98] transition shadow-sm"
+              className="mt-4 w-full py-3 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm active:scale-[0.98] transition shadow-sm inline-flex items-center justify-center gap-2"
             >
-              🚀 {t("game.startCta")}
+              <Rocket size={17} /> {t("game.startCta")}
             </button>
           )}
         </Card>
 
         <Card className="p-5 lg:p-6">
-          <SectionTitle emoji="🏆">{t("game.badges")}</SectionTitle>
+          <SectionTitle icon={<Trophy size={20} />}>{t("game.badges")}</SectionTitle>
           <p className="text-neutral-400 dark:text-neutral-500 text-sm -mt-2 mb-4">
             {t("game.badgesSub", { n: unlockedCount, total: badges.length })}
           </p>
-          <BadgeShelf badges={badges} nameOf={nameOf} />
+          <BadgeShelf badges={badgesWithIcons} nameOf={nameOf} />
         </Card>
       </div>
 
       {/* ══ Grafik progres (tetap ada, bergaya lebih ramah) ══ */}
       <Card className="p-5 lg:p-6">
         <div className="flex items-center justify-between mb-4">
-          <SectionTitle emoji="📈">{t("history.card7Title")}</SectionTitle>
+          <SectionTitle icon={<TrendingUp size={20} />}>{t("history.card7Title")}</SectionTitle>
           <button onClick={onViewHistory} className="inline-flex items-center gap-1 text-primary dark:text-accent hover:underline text-sm font-semibold">
             {t("history.viewAll")} <ChevronRight size={15} />
           </button>
@@ -160,7 +177,7 @@ export function Dashboard({ onTriggerBreak, onViewHistory, onOpenActivity }) {
         <div className="h-56 sm:h-64">
           {history.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 gap-2">
-              <span className="text-4xl">📊</span>
+              <BarChart3 size={30} className="opacity-50" />
               <span className="text-sm text-center max-w-xs">{t("dashboard.chartEmpty")}</span>
             </div>
           ) : (
