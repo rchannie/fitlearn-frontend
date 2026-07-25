@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { User, Bell, ShieldCheck, Plug, HelpCircle, Camera, Eye, Building2, Languages, Loader2, Check, Coffee } from "lucide-react";
-import { Card, Toggle, PrimaryButton } from "./shared";
+import { User, Bell, ShieldCheck, Plug, HelpCircle, Camera, Eye, GraduationCap, Languages, Loader2, Check, Coffee, Settings as SettingsIcon } from "lucide-react";
+import { Card, Toggle, PrimaryButton, PageHeader } from "./shared";
 import { useT } from "../i18n/LanguageProvider";
 import { useAuth } from "../context/AuthContext";
 import { useBreakDuration } from "../lib/breakPrefs";
@@ -27,10 +27,12 @@ export function Settings() {
   ];
 
   const displayName = isAuthenticated && profile ? profile.fullName : t("dashboard.greetingGuest");
-  const initials = isAuthenticated && profile ? profile.initials : "FW";
+  const initials = isAuthenticated && profile ? profile.initials : "FL";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
+
+      <PageHeader icon={<SettingsIcon size={24} />} title={t("nav.settings")} subtitle={t("settings.pageSub")} />
 
       {/* Profile card */}
       <Card className="p-5 lg:p-6">
@@ -43,7 +45,7 @@ export function Settings() {
             {profile?.email && (
               <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-0.5">
                 {profile.jobTitle || profile.email}
-                {profile.company && <span className="inline-flex items-center gap-1"> · <Building2 size={11} /> {profile.company}</span>}
+                {profile.company && <span className="inline-flex items-center gap-1"> · <GraduationCap size={12} /> {profile.company}</span>}
               </p>
             )}
           </div>
@@ -58,7 +60,7 @@ export function Settings() {
             <button
               key={s.id}
               onClick={() => setActive(s.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-left text-sm font-medium transition ${
                 active === s.id
                   ? "bg-primary/10 text-primary dark:bg-accent/12 dark:text-accent"
                   : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-800 dark:hover:text-white"
