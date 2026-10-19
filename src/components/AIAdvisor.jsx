@@ -1,26 +1,13 @@
-import { Sparkles, AlertTriangle, CheckCircle2, Coffee, Eye, Wind, Droplet, Brain, ArrowRight, Inbox, Activity, Zap } from "lucide-react";
+import { Sparkles, Coffee, Eye, Wind, Droplet, Brain, ArrowRight, Inbox, Activity, Zap, HeartPulse, Droplets, Thermometer } from "lucide-react";
 import { Card, GaugeRing, PageHeader } from "./shared";
+import { HealthStatusCard } from "./HealthWidgets";
 import { useHealth } from "../context/HealthProvider";
 import { useT } from "../i18n/LanguageProvider";
+import { useHealthAssessment } from "../hooks/useHealthAssessment";
+import { rateHeartRate, rateSpo2 } from "../lib/healthRules";
 
 const PERCLOS_THRESHOLD = Number(import.meta.env.VITE_PERCLOS_THRESHOLD) || 0.4;
 const r = (v) => (v == null ? 0 : Math.round(v));
-
-/** Tentukan peringatan prioritas tertinggi dari kondisi saat ini. */
-function pickPriority({ stressLevel, fatigueScore, vitals, breakWarning }) {
-  const perclos = vitals.perclos;
-  if (stressLevel > 65 && fatigueScore > 60)
-    return { tone: "alert", reasonKey: "advisor.reasonOverload", min: breakWarning?.recommendedMinutes || 10 };
-  if (stressLevel > 65)
-    return { tone: "alert", reasonKey: "advisor.reasonStressHigh", min: breakWarning?.recommendedMinutes || 10 };
-  if (fatigueScore > 60)
-    return { tone: "alert", reasonKey: "advisor.reasonFatigue", min: breakWarning?.recommendedMinutes || 10 };
-  if (perclos != null && perclos > PERCLOS_THRESHOLD)
-    return { tone: "warning", reasonKey: "advisor.reasonEyeStrain", min: 5 };
-  if (breakWarning?.triggered)
-    return { tone: "warning", reasonKey: "advisor.reasonLongSession", min: breakWarning?.recommendedMinutes || 10 };
-  return null; // semua aman
-}
 
 /** Susun kartu saran berdasarkan kondisi (reaktif ke skor). */
 function buildSuggestions({ focusScore, stressLevel, fatigueScore, vitals, breakWarning }) {
@@ -50,6 +37,27 @@ function buildSuggestions({ focusScore, stressLevel, fatigueScore, vitals, break
   return out;
 }
 
+/** Saran dari perangkat IoT (gelang & unit ruangan), memakai teks faktor keputusan. */
+const BAND_ICON = {
+  hrVeryHigh: HeartPulse, hrHigh: HeartPulse, hrLow: HeartPulse, spo2Low: Droplets, spo2Below: Droplets,
+  roomHot: Thermometer, roomCold: Thermometer, roomHumid: Droplet, roomDry: Droplet, roomAir: Wind,
+};
+const IOT_FROM = { band: "decision.fromBand", room: "decision.fromRoom" };
+function bandSuggestions(factors, t) {
+  return factors
+    .filter((f) => f.source === "band" || f.source === "room")
+    .map((f) => ({
+      icon: BAND_ICON[f.id] || HeartPulse,
+      tone: f.level === "alert" ? "alert" : "warning",
+      titleKey: `decision.f.${f.id}.title`,
+      bodyKey: `decision.f.${f.id}.advice`,
+      vars: { v: f.value },
+      basis: t(IOT_FROM[f.source]),
+    }));
+}
+
+const GAUGE = { good: "normal", warning: "warning", alert: "alert", none: "normal" };
+
 const TONE_CARD = {
   alert: "border-danger/30 bg-danger/5",
   warning: "border-warning/30 bg-warning/5",
@@ -76,11 +84,15 @@ function StatusChip({ icon, label, value, status }) {
 export function AIAdvisor({ onTriggerBreak }) {
   const { t } = useT();
   const { data } = useHealth();
+  const { assessment, band, scores } = useHealthAssessment();
   const { focusScore, stressLevel, fatigueScore } = data;
-  const hasData = focusScore != null || stressLevel != null;
+  // Saran muncul dari skor kamera (sesi berjalan), gelang IoT, dan/atau unit ruangan.
+  const hasData = scores.live || band.fresh || assessment.sources.room;
 
-  const priority = hasData ? pickPriority(data) : null;
-  const suggestions = hasData ? buildSuggestions(data) : [];
+  const suggestions = [
+    ...bandSuggestions(assessment.factors, t),
+    ...(scores.live ? buildSuggestions(data) : []),
+  ];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 lg:space-y-6">
@@ -93,48 +105,17 @@ export function AIAdvisor({ onTriggerBreak }) {
         </Card>
       ) : (
         <>
-          {/* Status ringkas */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <StatusChip icon={<Brain size={11} />} label={t("advisor.statusFocus")} value={focusScore == null ? null : Math.round(focusScore)} status={focusScore >= 70 ? "normal" : focusScore >= 50 ? "warning" : "alert"} />
-            <StatusChip icon={<Activity size={11} />} label={t("advisor.statusStress")} value={stressLevel == null ? null : Math.round(stressLevel)} status={stressLevel > 65 ? "alert" : stressLevel > 40 ? "warning" : "normal"} />
-            <StatusChip icon={<Zap size={11} />} label={t("advisor.statusFatigue")} value={fatigueScore == null ? null : Math.round(fatigueScore)} status={fatigueScore > 60 ? "alert" : fatigueScore > 35 ? "warning" : "normal"} />
-          </div>
+          {/* Keputusan bersama (sama dengan Dashboard): gelang + kamera + ML + aktivitas */}
+          <HealthStatusCard assessment={assessment} t={t} onBreak={onTriggerBreak} maxReasons={0} />
 
-          {/* Priority alert */}
-          {priority ? (
-            <Card className={`p-5 ${priority.tone === "alert" ? "border-danger/40" : "border-warning/40"}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${priority.tone === "alert" ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning"}`}>
-                    <AlertTriangle size={22} />
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide font-semibold text-neutral-400">{t("advisor.priorityTitle")}</div>
-                    <div className="text-neutral-900 dark:text-white font-semibold mt-0.5">{t(priority.reasonKey)}</div>
-                    <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1 max-w-xl leading-relaxed">{t("advisor.sugBreakBody")}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={onTriggerBreak}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shrink-0 active:scale-95 transition ${priority.tone === "alert" ? "bg-danger hover:opacity-90" : "bg-warning hover:opacity-90"}`}
-                >
-                  <Coffee size={16} /> {t("advisor.actNow")}
-                </button>
-              </div>
-            </Card>
-          ) : (
-            <Card className="p-5 border-accent/30 bg-accent/5">
-              <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-accent/15 text-primary dark:text-accent flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={22} />
-                </div>
-                <div>
-                  <div className="text-neutral-900 dark:text-white font-semibold">{t("advisor.allClearTitle")}</div>
-                  <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1 leading-relaxed">{t("advisor.allClearBody")}</p>
-                </div>
-              </div>
-            </Card>
-          )}
+          {/* Status ringkas */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {band.fresh && <StatusChip icon={<HeartPulse size={11} />} label={t("dash.m.hr")} value={band.heartRate} status={GAUGE[rateHeartRate(band.heartRate).level]} />}
+            {band.fresh && <StatusChip icon={<Droplets size={11} />} label="SpO2" value={band.spo2} status={GAUGE[rateSpo2(band.spo2).level]} />}
+            {scores.live && <StatusChip icon={<Brain size={11} />} label={t("advisor.statusFocus")} value={focusScore == null ? null : Math.round(focusScore)} status={focusScore >= 70 ? "normal" : focusScore >= 50 ? "warning" : "alert"} />}
+            {scores.live && <StatusChip icon={<Activity size={11} />} label={t("advisor.statusStress")} value={stressLevel == null ? null : Math.round(stressLevel)} status={stressLevel > 65 ? "alert" : stressLevel > 40 ? "warning" : "normal"} />}
+            {scores.live && <StatusChip icon={<Zap size={11} />} label={t("advisor.statusFatigue")} value={fatigueScore == null ? null : Math.round(fatigueScore)} status={fatigueScore > 60 ? "alert" : fatigueScore > 35 ? "warning" : "normal"} />}
+          </div>
 
           {/* Suggestion cards */}
           {suggestions.length > 0 && (
@@ -147,7 +128,7 @@ export function AIAdvisor({ onTriggerBreak }) {
                     <Card key={i} className={`p-4 border ${TONE_CARD[s.tone]}`}>
                       <div className="flex items-start justify-between">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${TONE_ICON[s.tone]}`}><Icon size={17} /></div>
-                        <span className="text-[11px] font-mono text-neutral-400">{t("advisor.confidence")} {s.conf}%</span>
+                        {s.conf != null && <span className="text-[11px] font-mono text-neutral-400">{t("advisor.confidence")} {s.conf}%</span>}
                       </div>
                       <div className="mt-3 text-neutral-800 dark:text-white font-semibold text-sm">{t(s.titleKey, s.vars)}</div>
                       <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-xs leading-relaxed">{t(s.bodyKey, s.vars)}</p>

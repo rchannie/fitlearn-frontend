@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Eye, Activity, AlertTriangle, Coffee, Keyboard, MousePointerClick } from "lucide-react";
+import { Brain, Eye, Activity, AlertTriangle, Coffee, Keyboard, MousePointerClick, HeartPulse, Droplets } from "lucide-react";
 import { PrimaryButton, GhostButton } from "./shared";
 import { useT } from "../i18n/LanguageProvider";
 
@@ -11,6 +11,8 @@ const REASONS = {
   distraction: { key: "focus.reasonDistraction", Icon: AlertTriangle },
   overactive:  { key: "focus.reasonOveractive",  Icon: Keyboard },
   inactive:    { key: "focus.reasonInactive",    Icon: MousePointerClick },
+  heart:       { key: "focus.reasonHeart",       Icon: HeartPulse },
+  oxygen:      { key: "focus.reasonOxygen",      Icon: Droplets },
 };
 
 /**

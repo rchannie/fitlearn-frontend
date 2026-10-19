@@ -6,6 +6,7 @@ import { useActivityMonitor } from "../hooks/useActivityMonitor";
 import { useNotifications } from "./NotificationProvider";
 import { useHealth } from "./HealthProvider";
 import { recordBreakRecommended } from "../lib/breakStats";
+import { summarizeBand, rateHeartRate, rateSpo2 } from "../lib/healthRules";
 import { useT } from "../i18n/LanguageProvider";
 
 /**
@@ -20,6 +21,8 @@ import { useT } from "../i18n/LanguageProvider";
  *   - mata lelah / ngantuk      (PERCLOS di atas ambang bertahan)
  *   - ekspresi tegang           (facial tension tinggi bertahan)
  *   - pindah tab kelamaan       (Page Visibility — kembali setelah lama pergi)
+ *   - gelang IoT: detak jantung tinggi atau SpO2 rendah (rata-rata pembacaan
+ *     terbaru) → disarankan istirahat
  *
  * Selain kamera, provider juga memantau AKTIVITAS INPUT (keyboard + mouse)
  * lewat useActivityMonitor — dua sinyal ini BERDAMPINGAN:
@@ -50,6 +53,8 @@ const FOCUS_REASON_KEY = {
   distraction: "focus.reasonDistraction",
   overactive: "focus.reasonOveractive",
   inactive: "focus.reasonInactive",
+  heart: "focus.reasonHeart",
+  oxygen: "focus.reasonOxygen",
 };
 
 /** Widget kamera mengambang (PiP). Elemen video/canvas SELALU termount
@@ -102,7 +107,7 @@ export function WorkSessionProvider({ children }) {
   const { t } = useT();
   const face = useFaceVitals();
   const { pushAlert } = useNotifications();
-  const { setLiveVitals } = useHealth();
+  const { setLiveVitals, wearable } = useHealth();
 
   // Ref agar notifikasi sistem selalu memakai terjemahan terbaru tanpa
   // memaksa effect deteksi dibuat ulang saat bahasa berganti.
@@ -198,6 +203,17 @@ export function WorkSessionProvider({ children }) {
     check("eye", vitals.perclos != null && vitals.perclos > PERCLOS_THRESHOLD, EYE_MS, () => { pushAlert("eye", { v: vitals.perclos }); fireFocus("eye"); });
     check("tension", vitals.expression != null && vitals.expression.tension > TENSION_THRESHOLD, TENSION_MS, () => { pushAlert("tension"); fireFocus("tension"); });
   }, [camLive, vitals, pushAlert, fireFocus]);
+
+  // ── Sinyal gelang IoT selama sesi belajar ──
+  // Ambang "alert" (SpO2 < 92% atau detak jantung >= 120 bpm, rata-rata
+  // pembacaan terbaru) memunculkan saran istirahat seperti sinyal kamera.
+  useEffect(() => {
+    if (!active) return;
+    const band = summarizeBand(wearable.readings, Date.now());
+    if (!band.fresh) return;
+    if (rateSpo2(band.spo2).level === "alert") fireFocus("oxygen");
+    else if (rateHeartRate(band.heartRate).level === "alert") fireFocus("heart");
+  }, [active, wearable.readings, fireFocus]);
 
   // ── Deteksi pindah tab (Page Visibility) ──
   const awayStart = useRef(0);

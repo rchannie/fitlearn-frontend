@@ -80,3 +80,23 @@ p { margin: 0; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
+
+/* ── Warna seri grafik (divalidasi untuk buta warna & kontras) ─────────
+   Dipakai lewat stroke="var(--chart-1)". Mode gelap punya langkah sendiri
+   yang divalidasi terhadap permukaan kartu gelap (#221D3D). */
+:root {
+  --chart-1: #5B4BE6;   /* indigo  */
+  --chart-2: #D9731A;   /* amber   */
+  --chart-3: #0E9484;   /* teal    */
+  --chart-surface: #FFFFFF;
+  --chart-grid: rgba(23, 20, 41, 0.08);
+  --chart-axis: #8A8799;
+}
+.dark {
+  --chart-1: #7B6BFF;
+  --chart-2: #D9731A;
+  --chart-3: #12A594;
+  --chart-surface: #221D3D;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-axis: #9C97B5;
+}

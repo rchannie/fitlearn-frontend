@@ -1,10 +1,14 @@
 import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { Heart, Eye, Zap, Camera as CameraIcon, CameraOff, Loader2, HeartPulse } from "lucide-react";
+import { Eye, Zap, Camera as CameraIcon, CameraOff, Loader2, HeartPulse, ScanEye } from "lucide-react";
 import { Card, GaugeRing, StatusPill, TimelineItem, PageHeader } from "./shared";
+import { WearableCard } from "./WearableCard";
+import { RoomPanel } from "./HealthWidgets";
 import { useHealth } from "../context/HealthProvider";
 import { useWorkSession } from "../context/WorkSessionProvider";
 import { useT } from "../i18n/LanguageProvider";
+import { useHealthAssessment } from "../hooks/useHealthAssessment";
+import { rateHeartRate, rateSpo2, rateBlink, rateSuhu, rateUdara } from "../lib/healthRules";
 
 const PERCLOS_THRESHOLD = Number(import.meta.env.VITE_PERCLOS_THRESHOLD) || 0.4;
 
@@ -51,7 +55,7 @@ function CameraFeed({ ws, t }) {
       <div className="flex items-center justify-between mb-3">
         <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("health.cameraFeed")}</h3>
         <span className="inline-flex items-center gap-1.5 text-accent text-xs">
-          <span className={`w-1.5 h-1.5 rounded-full bg-accent ${status === "running" ? "animate-pulse" : "opacity-40"}`} /> rPPG
+          <span className={`w-1.5 h-1.5 rounded-full bg-accent ${status === "running" ? "animate-pulse" : "opacity-40"}`} /> MediaPipe
         </span>
       </div>
 
@@ -113,27 +117,70 @@ function CameraFeed({ ws, t }) {
 }
 
 export function HealthMonitoring() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const { data, isLive, transport } = useHealth();
   const ws = useWorkSession();
   const camLive = ws.camLive;
   const fv = ws.vitals;
 
+  const { band, session, room, now: nowMs } = useHealthAssessment();
+
   // Saat kamera live, vitals dari CV adalah sumber kebenaran; null = N/A.
+  // Detak jantung & SpO2 tidak lagi dari kamera: lihat kartu Gelang di bawah.
   const live = camLive;
-  const heartRate = live ? fv.heartRate : data.vitals.heartRate;
   const perclos = live ? fv.perclos : data.vitals.perclos;
   const pupilDilation = live ? fv.pupilDilation : data.vitals.pupilDilation;
+  const blinkRate = live ? fv.blinkRate : null;
   const { stressLevel, fatigueScore, focusScore } = data;
   const hasScores = stressLevel != null;
 
-  const hrStatus = heartRate == null ? "normal" : heartRate > 100 ? "warning" : "normal";
+  const blinkRating = rateBlink(blinkRate, session.seconds);
+  const blinkStatus = blinkRating.level === "warning" ? "warning" : "normal";
   const pupilPct = pupilDilation == null ? null : Math.round(pupilDilation * 100);
   const pupilStatus = pupilDilation == null ? "normal" : pupilDilation > 0.6 ? "warning" : "normal";
   const perclosStatus = perclos == null ? "normal" : perclos > PERCLOS_THRESHOLD ? "alert" : perclos > PERCLOS_THRESHOLD * 0.7 ? "warning" : "normal";
 
   // Lini masa dibangun dari pembacaan nyata; idle = kosong.
   const events = [];
+  const nowLabel = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (band.fresh) {
+    const hr = rateHeartRate(band.heartRate);
+    if (band.heartRate != null) {
+      events.push({
+        time: nowLabel,
+        text: t(hr.level === "good" ? "health.tlBandHrOk" : "health.tlBandHrOff", { v: band.heartRate }),
+        type: hr.level === "alert" ? "critical" : hr.level === "warning" ? "warning" : "info",
+      });
+    }
+    const ox = rateSpo2(band.spo2);
+    if (band.spo2 != null) {
+      events.push({
+        time: nowLabel,
+        text: t(ox.level === "good" ? "health.tlBandSpo2Ok" : "health.tlBandSpo2Low", { v: band.spo2 }),
+        type: ox.level === "alert" ? "critical" : ox.level === "warning" ? "warning" : "info",
+      });
+    }
+  }
+  if (room.fresh) {
+    if (room.suhu != null) {
+      const su = rateSuhu(room.suhu);
+      events.push({
+        time: nowLabel,
+        text: room.suhuDummy
+          ? t("health.tlRoomSuhuSim", { v: room.suhu.toFixed(1) })
+          : t(su.level === "good" ? "health.tlRoomSuhuOk" : "health.tlRoomSuhuOff", { v: room.suhu.toFixed(1) }),
+        type: !room.suhuDummy && su.level === "warning" ? "warning" : "info",
+      });
+    }
+    if (room.gasPpm != null) {
+      const ud = rateUdara(room.gasPpm);
+      events.push({
+        time: nowLabel,
+        text: t(ud.level === "good" ? "health.tlRoomAirOk" : "health.tlRoomAirOff", { v: Math.round(room.gasPpm) }),
+        type: ud.level === "warning" ? "warning" : "info",
+      });
+    }
+  }
   if (hasScores) {
     const now = new Date();
     const tm = (m) => new Date(now.getTime() - m * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -191,15 +238,13 @@ export function HealthMonitoring() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-danger/10 text-danger flex items-center justify-center"><Heart size={18} /></div>
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary dark:text-accent flex items-center justify-center"><ScanEye size={18} /></div>
                 <div>
-                  <div className="text-neutral-600 dark:text-neutral-400 text-sm">{t("health.heartRate")}</div>
-                  <div className="text-neutral-400 text-xs">
-                    {live && !fv.hrReady ? t("health.calibrating") : `HRV ${fv.hrv != null ? fv.hrv + " ms" : "--"}`}
-                  </div>
+                  <div className="text-neutral-600 dark:text-neutral-400 text-sm">{t("health.blinkRate")}</div>
+                  <div className="text-neutral-400 text-xs">{t("health.blinkSub")}</div>
                 </div>
               </div>
-              <GaugeRing value={heartRate} max={140} size={88} unit={t("common.bpm")} status={hrStatus} />
+              <GaugeRing value={blinkRate} max={30} size={88} unit={t("dash.u.perMin")} status={blinkStatus} />
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -249,6 +294,12 @@ export function HealthMonitoring() {
           </div>
         </Card>
       </div>
+
+      {/* Gelang IoT — data dari backend fitwork-api, terpisah dari kamera */}
+      <WearableCard />
+
+      {/* Unit ruangan (suhu, kelembapan, MQ135) */}
+      <RoomPanel room={room} t={t} now={nowMs} locale={lang === "id" ? "id-ID" : "en-US"} />
     </div>
   );
 }

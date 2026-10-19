@@ -1,18 +1,13 @@
 import { useState } from "react";
-import { Brain, Dumbbell, Apple, Moon, Share2, Download, AlertTriangle, Coffee, Inbox, Check, Lightbulb } from "lucide-react";
+import { Brain, Dumbbell, Apple, Moon, Share2, Download, Inbox, Check, Lightbulb } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 import { Card, PrimaryButton, GhostButton, PageHeader } from "./shared";
 import { useHealth } from "../context/HealthProvider";
 import { useT } from "../i18n/LanguageProvider";
+import { HealthStatusCard } from "./HealthWidgets";
+import { useHealthAssessment } from "../hooks/useHealthAssessment";
 
 const PERCLOS_THRESHOLD = Number(import.meta.env.VITE_PERCLOS_THRESHOLD) || 0.4;
-
-const REASON_KEY = {
-  stress_index_high: { title: "advisor.reasonStressHigh", body: "advisor.sugBreatheBody" },
-  fatigue_detected: { title: "advisor.reasonFatigue", body: "advisor.sugBreakBody" },
-  long_session: { title: "advisor.reasonLongSession", body: "advisor.sugBreakBody" },
-  cognitive_overload: { title: "advisor.reasonOverload", body: "advisor.sugBreatheBody" },
-};
 
 // Tips terlokalisasi (dipilih berdasarkan bahasa aktif).
 const RECS = {
@@ -68,8 +63,11 @@ export function Recommendations() {
   const { t, lang } = useT();
   const [tab, setTab] = useState("mental");
   const { data } = useHealth();
-  const { focusScore, stressLevel, fatigueScore, vitals, breakWarning } = data;
-  const hasData = focusScore != null;
+  const { assessment, band } = useHealthAssessment();
+  const { focusScore, stressLevel, fatigueScore, vitals } = data;
+  // Skor kamera untuk skor kesehatan & radar; gelang saja sudah cukup untuk saran.
+  const hasScores = focusScore != null;
+  const hasData = hasScores || band.fresh || assessment.sources.room;
 
   const tabs = [
     { id: "mental", label: t("recommendations.tabMental"), icon: <Brain size={15} /> },
@@ -90,17 +88,21 @@ export function Recommendations() {
           <p className="text-neutral-400 dark:text-neutral-500 text-sm max-w-sm">{t("recommendations.idle")}</p>
         </Card>
       ) : (
-        <RecommendationsBody
-          t={t} lang={lang} tab={tab} setTab={setTab} tabs={tabs} currentTab={currentTab} recList={recList}
-          focusScore={focusScore} stressLevel={stressLevel} fatigueScore={fatigueScore}
-          vitals={vitals} breakWarning={breakWarning}
-        />
+        <>
+          <HealthStatusCard assessment={assessment} t={t} maxReasons={2} />
+          <RecommendationsBody
+            t={t} lang={lang} tab={tab} setTab={setTab} tabs={tabs} currentTab={currentTab} recList={recList}
+            hasScores={hasScores} factors={assessment.factors}
+            focusScore={focusScore} stressLevel={stressLevel} fatigueScore={fatigueScore}
+            vitals={vitals}
+          />
+        </>
       )}
     </div>
   );
 }
 
-function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, focusScore, stressLevel, fatigueScore, vitals, breakWarning }) {
+function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, hasScores, factors, focusScore, stressLevel, fatigueScore, vitals }) {
   const [shared, setShared] = useState(false);
   const healthScore = clamp((focusScore + (100 - stressLevel) + (100 - fatigueScore)) / 3);
   const risk = healthScore >= 75 ? { label: t("recommendations.lowRisk"), cls: "bg-accent/15 text-primary dark:text-accent" }
@@ -181,36 +183,24 @@ function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, 
     { dim: t("recommendations.dimCognitive"), val: clamp(pupil * 100) },
   ];
 
-  const reason = breakWarning?.reason ? REASON_KEY[breakWarning.reason] : null;
+  // Tab yang disarankan: gelang didahulukan (detak jantung → latihan napas
+  // di "mental"; SpO2 rendah → udara segar & gerak di "fisik"), lalu skor kamera.
+  const bandFactor = factors.find((f) => f.source === "band");
+  const roomFactor = factors.find((f) => f.source === "room");
   const suggestedTab =
-    stressLevel > 65 ? "mental"
+    bandFactor ? (bandFactor.id.startsWith("spo2") ? "physical" : "mental")
+    : roomFactor ? "physical"
+    : !hasScores ? tab
+    : stressLevel > 65 ? "mental"
     : fatigueScore > 60 ? "sleep"
     : perclos > PERCLOS_THRESHOLD ? "physical"
     : tab;
 
   return (
     <>
-      {breakWarning?.triggered && reason && (
-        <Card className="p-5 border-warning/40 bg-linear-to-br from-warning/10 to-transparent">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-            <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-warning/15 text-warning flex items-center justify-center shrink-0">
-                <AlertTriangle size={22} />
-              </div>
-              <div>
-                <div className="text-neutral-900 dark:text-white font-semibold">{t(reason.title)}</div>
-                <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1 max-w-xl leading-relaxed">{t(reason.body)}</p>
-              </div>
-            </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-warning text-white text-sm font-semibold shrink-0">
-              <Coffee size={16} /> {t("advisor.sugBreakTitle", { min: breakWarning.recommendedMinutes })}
-            </div>
-          </div>
-        </Card>
-      )}
-
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 lg:gap-6">
-        <Card className="xl:col-span-2 p-5 lg:p-6">
+        <Card className={`${hasScores ? "xl:col-span-2" : "xl:col-span-3"} p-5 lg:p-6`}>
+          {hasScores && (<>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <div className="text-neutral-500 dark:text-neutral-400 text-sm">{t("recommendations.healthScore")}</div>
@@ -235,8 +225,9 @@ function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, 
             <div className="h-full bg-warning" style={{ width: `${(moderate / total) * 100}%` }} />
             <div className="h-full bg-danger/70" style={{ width: `${(poor / total) * 100}%` }} />
           </div>
+          </>)}
 
-          <div className="mt-5 flex flex-wrap gap-2 items-center">
+          <div className={`${hasScores ? "mt-5" : ""} flex flex-wrap gap-2 items-center`}>
             {tabs.map((x) => (
               <button
                 key={x.id}
@@ -268,7 +259,7 @@ function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, 
           </div>
         </Card>
 
-        <Card className="p-5 lg:p-6">
+        {hasScores && <Card className="p-5 lg:p-6">
           <h3 style={{ fontFamily: "'Baloo 2', 'Sora', sans-serif", fontSize: 15, fontWeight: 700 }} className="text-neutral-900 dark:text-white">{t("recommendations.wellnessProfile")}</h3>
           <p className="text-neutral-400 dark:text-neutral-500 mt-1 text-sm">{t("recommendations.wellnessSub")}</p>
           <div className="h-64 mt-2">
@@ -280,7 +271,7 @@ function RecommendationsBody({ t, lang, tab, setTab, tabs, currentTab, recList, 
               </RadarChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </Card>}
       </div>
     </>
   );

@@ -16,13 +16,16 @@ menyajikannya dalam antarmuka **gamifikasi yang ramah pelajar**.
 
 FitLearn mengintegrasikan tiga lapisan teknologi:
 1. **Computer Vision di sisi klien** (MediaPipe di browser) — ekstraksi kondisi visual
-   (kelelahan mata/PERCLOS, postur, ekspresi, detak jantung via rPPG) tanpa video keluar
-   dari perangkat pelajar.
+   (kelelahan mata/PERCLOS, kedipan, dilatasi pupil, postur, ekspresi) tanpa video keluar
+   dari perangkat pelajar. Detak jantung tidak lagi diestimasi dari kamera (rPPG dihapus)
+   karena sudah diukur langsung oleh gelang IoT.
 2. **Machine Learning (XGBoost) di backend** — klasifikasi tingkat risiko/kelelahan dari
    fitur numerik gabungan.
 3. **IoT wearable (ESP32)** — sensor fisiologis & lingkungan (detak jantung/SpO2,
-   suhu/kelembapan, kualitas udara). *(Lapisan hardware bersifat rancangan pada artikel;
-   frontend ini menyediakan dashboard penyajiannya.)*
+   suhu/kelembapan, kualitas udara). *(Detak jantung & SpO2 dari gelang ESP32-C3 + MAX30102
+   dan unit ruangan Wemos D1 Mini (DHT11 + MQ135) sudah terhubung ke backend dan tampil
+   di aplikasi. Sensor DHT11 yang terpasang sekarang rusak, sehingga suhu & kelembapan
+   diisi data simulasi oleh firmware dan ditandai `suhu_dummy = true`.)*
 
 FitLearn adalah **turunan (fork) dari FitWork** — aplikasi serupa untuk pekerja remote.
 FitLearn menggunakan **backend & database yang sama persis** dengan FitWork; yang berbeda
@@ -54,7 +57,7 @@ kesadaran kesehatan pelajar**, bukan pada algoritma ML-nya.
 ```
 ┌───────────────────────── LAPISAN KLIEN (browser pelajar) ──────────────────────────┐
 │  React 19 SPA (Vite)                                                                 │
-│  ├── Computer Vision: MediaPipe (useFaceVitals) → PERCLOS, postur, ekspresi, rPPG    │
+│  ├── Computer Vision: MediaPipe (useFaceVitals) → PERCLOS, kedip, postur, ekspresi   │
 │  ├── Activity Monitor: keyboard/mouse (useActivityMonitor)                           │
 │  └── Dashboard gamifikasi (level/XP/streak/badge/quest)                              │
 │         │  hanya ANGKA hasil ekstraksi yang dikirim (video tidak pernah keluar)      │
@@ -65,6 +68,10 @@ kesadaran kesehatan pelajar**, bukan pada algoritma ML-nya.
 │  ├── POST /healthscore   → skor kesehatan/risiko                                      │
 │  ├── POST /assess        → asesmen                                                    │
 │  ├── WS   /ws/vitals      → push vitals real-time (fallback polling bila gagal)       │
+│  ├── POST /iot/vitals     → terima data gelang IoT (HR & SpO2, header X-Device-Key)   │
+│  ├── GET  /iot/vitals/{user_id}/terbaru → riwayat data gelang                         │
+│  ├── POST /iot/room       → data unit ruangan (suhu, kelembapan, MQ135, suhu_dummy)   │
+│  ├── GET  /iot/room/{user_id}/terbaru → riwayat data ruangan                          │
 │  └── Model XGBoost (fitwork_model.pkl) untuk klasifikasi                              │
 └─────────┬───────────────────────────────────────────────────────────────────────────┘
           │
@@ -72,11 +79,16 @@ kesadaran kesehatan pelajar**, bukan pada algoritma ML-nya.
 │  Postgres + Auth                                                                      │
 │  ├── auth.users            → autentikasi (email/password, opsi Google)               │
 │  ├── public.profiles       → profil (full_name, job_title→"Kelas", company→"Sekolah")│
-│  └── public.daily_stats    → statistik harian (focus/stress/fatigue/work_seconds)    │
-│         + RPC add_health_sample (akumulasi sampel per hari)                           │
+│  ├── public.daily_stats    → statistik harian (focus/stress/fatigue/work_seconds)    │
+│  │      + RPC add_health_sample (akumulasi sampel per hari)                          │
+│  ├── public.iot_vitals     → data gelang (heart_rate, spo2, recorded_at)             │
+│  └── public.iot_room       → data ruangan (suhu, kelembapan, suhu_dummy, gas_ppm)    │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 
-(Opsional) IoT wearable ESP32 → HTTP JSON → backend  [rancangan hardware pada artikel]
+Gelang IoT (ESP32-C3 + MAX30102) → HTTP POST /iot/vitals tiap ±15 detik → backend
+  → simpan ke iot_vitals → push WebSocket ke dashboard (kartu "Gelang FitLearn")
+Unit ruangan (Wemos D1 Mini: DHT11 + MQ135) → HTTP POST /iot/room tiap ±30 detik → backend
+  → simpan ke iot_room → push WebSocket ke dashboard (panel "Unit ruangan")
 ```
 
 ---
@@ -88,7 +100,10 @@ kesadaran kesehatan pelajar**, bukan pada algoritma ML-nya.
 2. **Pengiriman & Pra-pemrosesan** — data numerik (JSON) dikirim via HTTP/WebSocket ke
    backend; dinormalisasi & divalidasi (termasuk penanganan "wajah tak terdeteksi" agar
    tidak menampilkan angka palsu — vitals ditandai N/A).
-3. **Analisis** — vektor fitur diproses model XGBoost → klasifikasi tingkat risiko/kelelahan.
+3. **Analisis**: vektor fitur (sinyal kamera + detak jantung dari gelang) diproses model
+   XGBoost → skor fokus/stres/kelelahan. Lalu aturan keputusan (`src/lib/healthRules.js`)
+   menggabungkan skor ML, data gelang, sinyal kamera, lama sesi, dan aktivitas menjadi
+   status kondisi + alasan + tindakan (lihat bagian 6, "Pengambilan Keputusan").
 4. **Penyajian** — hasil ditampilkan di dashboard gamifikasi + peringatan istirahat saat
    ambang terlampaui; statistik diakumulasi ke `daily_stats` (reset per hari).
 
@@ -107,7 +122,8 @@ kesadaran kesehatan pelajar**, bukan pada algoritma ML-nya.
 **Backend (shared, repo `fitwork-api`):**
 - Python + FastAPI, di-deploy ke **Railway**
 - Model **XGBoost** terserialisasi (`fitwork_model.pkl`)
-- Endpoint: `/healthscore`, `/assess`, `/ws/vitals`
+- Endpoint: `/healthscore`, `/assess`, `/ws/vitals`, `/iot/vitals`,
+  `/iot/vitals/{user_id}/terbaru`, `/iot/room`, `/iot/room/{user_id}/terbaru`
 
 **Database & Auth (shared):** Supabase (Postgres + Auth)
 
@@ -118,16 +134,49 @@ kesadaran kesehatan pelajar**, bukan pada algoritma ML-nya.
 ## 6. Fitur Utama
 
 ### Halaman aplikasi
-- **Dashboard (gamifikasi)** — level & XP, streak harian, kartu stat (fokus/ketenangan/
-  jam belajar), misi harian (quests) dengan progress bar, koleksi lencana, grafik tren.
-- **Monitor Kesehatan** — kamera live + MediaPipe; vitals langsung (detak jantung rPPG,
-  PERCLOS, dilatasi pupil, postur, tegang wajah), lini masa kejadian.
+- **Dashboard**: dibaca dari atas ke bawah: sapaan & level; **Kondisi saat ini**
+  (keputusan + alasan + tombol istirahat); **Data langsung** per sumber (gelang IoT,
+  analisis ML, kamera, aktivitas) lengkap dengan status dan batas normal tiap metrik;
+  ringkasan **Hari ini**; **Tren** (sesi ini, 7 hari, detak jantung & SpO2 gelang);
+  dan **Progres belajar** (streak, misi harian, lencana).
+- **Monitor Kesehatan**: kamera live + MediaPipe; vitals langsung (kedipan, PERCLOS,
+  dilatasi pupil, postur, tegang wajah), lini masa kejadian (termasuk data gelang), dan kartu
+  **Gelang FitLearn** (detak jantung & SpO2 dari gelang IoT secara real-time, status
+  terhubung, tren 20 data terakhir). Data gelang disimpan terpisah dari data kamera,
+  sehingga tidak ikut masuk ke `daily_stats`.
 - **Riwayat** — rekap harian (tersimpan di Supabase `daily_stats`), grafik tren 14 hari.
 - **Asesmen** — kuesioner → skor via backend `/assess`.
 - **Rekomendasi** — saran personal berbasis sesi + ekspor PDF.
 - **AI Advisor** — insight & tips ramah pelajar.
 - **Monitor Aktivitas** — statistik ketikan & gerak mouse selama sesi belajar.
 - **Pengaturan** — profil (Kelas/Sekolah), privasi kamera, durasi istirahat, bahasa (ID/EN).
+
+### Pengambilan Keputusan (gelang IoT + kamera + ML + aktivitas)
+Semua sumber digabung oleh `src/lib/healthRules.js` (satu tempat, dipakai Dashboard,
+AI Advisor, Rekomendasi, notifikasi, dan saran istirahat saat sesi):
+
+| Sumber | Sinyal | Peringatan | Perlu tindakan |
+|---|---|---|---|
+| Gelang IoT | Detak jantung (rata-rata 3 bacaan terakhir) | > 100 atau < 50 bpm | ≥ 120 bpm |
+| Gelang IoT | SpO2 (rata-rata 3 bacaan terakhir) | < 95% | < 92% |
+| Model ML | Stres / kelelahan (0 sampai 100) | > 40 | > 65 / > 60 |
+| Model ML | Fokus | < 50 | |
+| Kamera | PERCLOS, kedipan, postur, tegang wajah | di atas/bawah ambang | |
+| Unit ruangan | Suhu | > 30 C atau < 18 C | |
+| Unit ruangan | Kelembapan | > 70% atau < 40% | |
+| Unit ruangan | Kualitas udara (estimasi MQ135) | > 1000 ppm | |
+| Sesi & aktivitas | Lama sesi, mengetik tanpa jeda | > 2,5 jam, status sibuk | |
+
+Keputusan: ada sinyal "perlu tindakan" → **istirahat 10 menit**; ≥ 2 peringatan →
+**istirahat 5 menit**; 1 peringatan → **perbaiki sesuai saran**; semua normal → **lanjut**.
+Detak jantung gelang juga dikirim ke backend sehingga skor ML memakai detak jantung
+nyata. Saat sesi belajar, SpO2 < 92% atau detak jantung ≥ 120 bpm memunculkan saran
+istirahat; detak jantung/SpO2 di luar normal juga masuk notifikasi.
+
+**Data simulasi tidak dipakai keputusan.** Suhu & kelembapan bertanda `suhu_dummy = true`
+(firmware mengisi data simulasi karena DHT11 rusak) hanya ditampilkan dengan label
+"simulasi" dan tidak dinilai (`IZINKAN_SIMULASI_DI_KEPUTUSAN = false` di
+`healthRules.js`). Kualitas udara MQ135 tetap data asli sehingga tetap dinilai.
 
 ### Sistem Gamifikasi (kebaruan UX FitLearn)
 Dihitung **murni dari data yang sudah ada** (`daily_stats`) — **tanpa tabel/skema baru**
@@ -192,10 +241,10 @@ Semua koneksi backend lewat environment variable (lihat `.env.example`):
 | Variable | Fungsi |
 |---|---|
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Auth + database (shared) |
-| `VITE_API_URL` | FastAPI `/healthscore` (shared, di Railway) |
+| `VITE_API_URL` | FastAPI `/healthscore` (shared, di Railway). Alamat dasarnya juga dipakai untuk data gelang (`/iot/vitals/...`) |
 | `VITE_WS_URL` | WebSocket vitals real-time (`wss://` di production) |
 | `VITE_PERCLOS_THRESHOLD` | Ambang kelelahan mata |
-| `VITE_ENABLE_*` | Feature flags (eye-tracking, gesture, rPPG, AI) |
+| `VITE_ENABLE_*` | Feature flags (eye-tracking, gesture, AI) |
 
 **Deployment checklist:**
 1. Vercel: import repo, isi env vars (sama dengan project FitWork).
@@ -236,15 +285,20 @@ Metode **black-box** terhadap fungsi utama (bisa dilakukan mandiri tanpa respond
 
 **Keterbatasan:**
 - Baru tahap perancangan & pengembangan; efektivitas/penerimaan pelajar belum dievaluasi.
-- Akurasi rPPG (detak jantung) sensitif pergerakan & pencahayaan.
-- Sensor MQ135 (IoT) hanya menghasilkan indeks kualitas udara relatif (perlu pemanasan).
+- Akurasi MAX30102 (detak jantung & SpO2) dipengaruhi posisi gelang dan gerakan tangan;
+  ambang keputusan bersifat umum (bukan alat diagnosis medis).
+- Sensor MQ135 (IoT) hanya menghasilkan indeks kualitas udara relatif (perlu pemanasan
+  dan kalibrasi R0); nilai ppm adalah estimasi.
+- Sensor DHT11 pada unit ruangan rusak; suhu & kelembapan saat ini data simulasi
+  (bertanda `suhu_dummy`) dan **tidak boleh dilaporkan sebagai hasil pengukuran**.
 - Data pelajar & pekerja berbagi satu Supabase (bisa dipisah bila diperlukan).
 
 **Rencana lanjut:**
 - Evaluasi pengguna: **System Usability Scale (SUS)** + adaptasi **Technology Acceptance
   Model (TAM)**.
 - Validasi akurasi sensor terhadap alat ukur pembanding.
-- Integrasi penuh IoT wearable ESP32.
+- Mengganti sensor DHT11 yang rusak supaya suhu & kelembapan ruangan kembali data asli
+  (firmware otomatis berhenti memakai data simulasi begitu DHT terbaca).
 
 ---
 

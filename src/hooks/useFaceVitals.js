@@ -8,8 +8,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
  *
  *   - perclos        : rasio mata tertutup (Eye Aspect Ratio → PERCLOS)
  *   - pupilDilation   : lebar iris / lebar mata (indeks beban kognitif)
- *   - heartRate       : estimasi BPM via rPPG (sinyal hijau dahi → FFT)
  *   - blinkRate       : kedipan per menit
+ *   - expression      : ketegangan wajah (proksi Action Unit)
+ *   - posture         : postur membungkuk dari sudut kepala
+ *
+ * Detak jantung & SpO2 TIDAK lagi diestimasi dari kamera (rPPG dihapus):
+ * keduanya diukur langsung oleh gelang IoT (MAX30102) yang lebih akurat.
  *
  * Semua diproses LOKAL. Tidak ada video yang keluar dari device.
  *
@@ -32,8 +36,6 @@ const L_EYE = { top: 159, bottom: 145, left: 33, right: 133 };
 const R_EYE = { top: 386, bottom: 374, left: 362, right: 263 };
 const L_IRIS = [468, 469, 470, 471, 472]; // pusat + 4 tepi
 const R_IRIS = [473, 474, 475, 476, 477];
-// Titik dahi untuk ROI rPPG (di antara alis, area kulit stabil)
-const FOREHEAD = [10, 151, 9, 8, 107, 336];
 // Landmark untuk FER (ekspresi) & postur
 const BROW_L = 105, BROW_R = 334;       // alis dalam kiri/kanan
 const EYE_INNER_L = 133, EYE_INNER_R = 362;
@@ -43,13 +45,9 @@ const NOSE_TIP = 1, CHIN = 152, FACE_TOP = 10; // untuk head pitch
 
 const PERCLOS_THRESHOLD = Number(import.meta.env.VITE_PERCLOS_THRESHOLD) || 0.4;
 const EAR_CLOSED = 0.21; // di bawah ini mata dianggap "tertutup"
-const RPPG_WINDOW = 256; // ~8.5 dtk @ 30fps; cukup untuk satu estimasi FFT
-const RPPG_MIN_SAMPLES = 150; // mulai estimasi setelah ~5 dtk data
 
 // Nilai null = BELUM/TIDAK terdeteksi → UI tampilkan N/A, bukan default.
 const NO_DATA = {
-  heartRate: null,
-  hrv: null,
   perclos: null,
   pupilDilation: null,
   blinkRate: null,
@@ -58,8 +56,6 @@ const NO_DATA = {
   posture: null,
   isSlumping: false,
   faceDetected: false,
-  hrConfidence: 0,
-  hrReady: false,
 };
 
 let _scriptPromise = null;
@@ -140,48 +136,6 @@ function posture(lm) {
   return { slumpScore: Number(slumpScore.toFixed(2)), isSlumping: slumpScore > 0.5 };
 }
 
-/**
- * Estimasi heart rate dari buffer sinyal (warna hijau rata-rata dahi).
- * Detrend → Hann window → DFT → cari puncak di pita 0.7–4 Hz (42–240 bpm).
- * Mengembalikan { bpm, snr } atau null bila sinyal belum cukup.
- */
-function estimateHeartRate(samples, fps) {
-  const n = samples.length;
-  if (n < RPPG_MIN_SAMPLES) return null;
-
-  // Detrend (hilangkan drift dengan kurangi rata-rata bergerak sederhana)
-  const mean = samples.reduce((a, b) => a + b, 0) / n;
-  const sig = new Array(n);
-  for (let i = 0; i < n; i++) sig[i] = samples[i] - mean;
-
-  // Hann window
-  for (let i = 0; i < n; i++) sig[i] *= 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1));
-
-  // DFT terbatas pada pita detak jantung (lebih murah daripada FFT penuh)
-  const fLow = 0.7, fHigh = 4.0;
-  const kLow = Math.floor((fLow * n) / fps);
-  const kHigh = Math.ceil((fHigh * n) / fps);
-  let bestK = -1, bestMag = 0, totalMag = 0;
-  for (let k = kLow; k <= kHigh && k < n / 2; k++) {
-    let re = 0, im = 0;
-    const w = (2 * Math.PI * k) / n;
-    for (let t = 0; t < n; t++) {
-      re += sig[t] * Math.cos(w * t);
-      im -= sig[t] * Math.sin(w * t);
-    }
-    const mag = Math.hypot(re, im);
-    totalMag += mag;
-    if (mag > bestMag) { bestMag = mag; bestK = k; }
-  }
-  if (bestK < 0) return null;
-
-  const freq = (bestK * fps) / n;
-  const bpm = Math.round(freq * 60);
-  const snr = totalMag > 0 ? bestMag / (totalMag / (kHigh - kLow + 1)) : 0;
-  if (bpm < 42 || bpm > 200) return null;
-  return { bpm, snr };
-}
-
 export function useFaceVitals() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -190,23 +144,16 @@ export function useFaceVitals() {
   const rafRef = useRef(null);
   const preloadedRef = useRef(false);
 
-  // buffer rPPG & deteksi kedip
-  const greenBuf = useRef([]);
-  const frameTimes = useRef([]);
+  // deteksi kedip & PERCLOS
   const lastBlink = useRef(false);
   const blinkTimes = useRef([]);
   const perclosWindow = useRef([]); // EAR<closed boolean dalam jendela bergulir
-  const hrRef = useRef(null);       // null = belum ada estimasi valid
-  const hrConfRef = useRef(0);
-  const bpmHistory = useRef([]);    // untuk HRV (variabilitas BPM)
 
   const [vitals, setVitals] = useState(NO_DATA);
   const [status, setStatus] = useState("idle");
 
   const onResults = useCallback((results) => {
     const now = performance.now();
-    frameTimes.current.push(now);
-    if (frameTimes.current.length > 60) frameTimes.current.shift();
 
     const faces = results.multiFaceLandmarks;
     const canvas = canvasRef.current;
@@ -215,10 +162,6 @@ export function useFaceVitals() {
 
     if (!faces || faces.length === 0) {
       setStatus("no-face");
-      // Reset buffer rPPG: sinyal lama tidak valid setelah wajah hilang.
-      greenBuf.current = [];
-      hrRef.current = null;
-      hrConfRef.current = 0;
       setVitals(NO_DATA); // tampilkan N/A, JANGAN tahan angka lama
       return;
     }
@@ -251,70 +194,7 @@ export function useFaceVitals() {
     const expr = expression(lm);
     const post = posture(lm);
 
-    // ── rPPG: warna hijau rata-rata pada ROI dahi ──
-    let hrConfidence = hrConfRef.current;
-    if (videoRef.current && canvas) {
-      const vw = videoRef.current.videoWidth;
-      const vh = videoRef.current.videoHeight;
-      if (vw && vh) {
-        // bounding box dahi dalam piksel
-        let minX = 1, minY = 1, maxX = 0, maxY = 0;
-        for (const idx of FOREHEAD) {
-          minX = Math.min(minX, lm[idx].x); maxX = Math.max(maxX, lm[idx].x);
-          minY = Math.min(minY, lm[idx].y); maxY = Math.max(maxY, lm[idx].y);
-        }
-        const sx = Math.max(0, Math.floor(minX * vw));
-        const sy = Math.max(0, Math.floor(minY * vh));
-        const sw = Math.max(1, Math.floor((maxX - minX) * vw));
-        const sh = Math.max(1, Math.floor((maxY - minY) * vh));
-        try {
-          const tmp = ctx; // pakai canvas overlay sebagai scratch
-          tmp.drawImage(videoRef.current, sx, sy, sw, sh, 0, 0, sw, sh);
-          const px = tmp.getImageData(0, 0, sw, sh).data;
-          let g = 0;
-          for (let i = 0; i < px.length; i += 4) g += px[i + 1];
-          g /= px.length / 4;
-          greenBuf.current.push(g);
-          if (greenBuf.current.length > RPPG_WINDOW) greenBuf.current.shift();
-          tmp.clearRect(0, 0, sw, sh);
-        } catch { /* CORS/empty frame — abaikan frame ini */ }
-
-        // estimasi fps dari timestamp nyata
-        const ft = frameTimes.current;
-        const fps =
-          ft.length > 1 ? (ft.length - 1) / ((ft[ft.length - 1] - ft[0]) / 1000) : 30;
-        const est = estimateHeartRate(greenBuf.current, fps || 30);
-        if (est) {
-          // smoothing eksponensial agar angka tidak melompat-lompat
-          const prev = hrRef.current ?? est.bpm;
-          const hr = Math.round(prev * 0.8 + est.bpm * 0.2);
-          hrRef.current = hr;
-          hrConfidence = Math.min(1, est.snr / 4);
-          hrConfRef.current = hrConfidence;
-          // HRV proxy: variabilitas estimasi BPM terakhir (~ms-equivalent).
-          bpmHistory.current.push(est.bpm);
-          if (bpmHistory.current.length > 20) bpmHistory.current.shift();
-        }
-      }
-    }
-
-    // heartRate hanya valid bila confidence cukup; jika belum → null (N/A).
-    const hrReady = hrRef.current != null && hrConfidence >= 0.25;
-    const heartRate = hrReady ? hrRef.current : null;
-
-    // HRV (proxy) dari sebaran BPM; butuh ≥5 sampel agar bermakna.
-    let hrv = null;
-    if (bpmHistory.current.length >= 5) {
-      const arr = bpmHistory.current;
-      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-      const variance = arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length;
-      // konversi kasar variabilitas BPM → milidetik-ekuivalen (ilustratif)
-      hrv = Math.round(Math.sqrt(variance) * 8);
-    }
-
     setVitals({
-      heartRate,
-      hrv,
       perclos: Number(perclos.toFixed(2)),
       pupilDilation: Number(pupilDilation.toFixed(2)),
       blinkRate,
@@ -323,8 +203,6 @@ export function useFaceVitals() {
       posture: post.slumpScore,
       isSlumping: post.isSlumping,
       faceDetected: true,
-      hrConfidence: Number(hrConfidence.toFixed(2)),
-      hrReady,
     });
   }, []);
 
@@ -406,10 +284,8 @@ export function useFaceVitals() {
       if (videoRef.current) videoRef.current.srcObject = null;
     } catch {}
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    greenBuf.current = [];
-    bpmHistory.current = [];
-    hrRef.current = null;
-    hrConfRef.current = 0;
+    blinkTimes.current = [];
+    perclosWindow.current = [];
     setVitals(NO_DATA);
     setStatus("idle");
   }, []);

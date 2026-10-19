@@ -17,6 +17,13 @@ const ALERT_MAP = {
   overactiveKeys:     { titleKey: "notif.overactiveTitle", bodyKey: "notif.overactiveKeysBody",     tone: "warning" },
   overactiveDuration: { titleKey: "notif.overactiveTitle", bodyKey: "notif.overactiveDurationBody", tone: "warning" },
   inactive:           { titleKey: "notif.inactiveTitle",   bodyKey: "notif.inactiveBody",            tone: "warning" },
+  // Dari gelang IoT
+  hrHigh:  { titleKey: "notif.hrHighTitle",  bodyKey: "notif.hrHighBody",  tone: "warning" },
+  hrLow:   { titleKey: "notif.hrLowTitle",   bodyKey: "notif.hrLowBody",   tone: "warning" },
+  spo2Low: { titleKey: "notif.spo2LowTitle", bodyKey: "notif.spo2LowBody", tone: "alert" },
+  // Dari unit ruangan (hanya data asli)
+  roomHot: { titleKey: "notif.roomHotTitle", bodyKey: "notif.roomHotBody", tone: "warning" },
+  roomAir: { titleKey: "notif.roomAirTitle", bodyKey: "notif.roomAirBody", tone: "warning" },
 };
 
 let _id = 0;

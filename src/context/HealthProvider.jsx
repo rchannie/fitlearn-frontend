@@ -1,6 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useNotifications } from "./NotificationProvider";
+import { useAuth } from "./AuthContext";
+import {
+  IOT_ENABLED, IOT_HISTORY_LIMIT, fetchLatestIot, isIotMessage, mergeReadings,
+  readingFromPush, wsUrlWithUser,
+  ROOM_HISTORY_LIMIT, fetchLatestRoom, isRoomMessage, roomFromPush,
+} from "../lib/iot";
+import { summarizeBand, bandAlerts, summarizeRoom, roomAlerts } from "../lib/healthRules";
 
 /**
  * HealthProvider — SATU sumber data kesehatan untuk seluruh app.
@@ -14,6 +21,23 @@ import { useNotifications } from "./NotificationProvider";
  *
  * Kamera (HealthMonitoring) mengirim vitals via setLiveVitals(); provider
  * meneruskannya ke backend agar skor ML dihitung dari pembacaan nyata.
+ *
+ * Gelang IoT: saat user login, WebSocket dibuka dengan ?user_id=<uuid> sehingga
+ * backend ikut mendorong data gelang (pesan source = "iot"). Pesan gelang
+ * disimpan TERPISAH di `wearable` (detak jantung & SpO2) dan tidak menimpa skor
+ * kamera, supaya daily_stats tetap hanya berisi sesi kamera. Riwayat awal
+ * diambil dari GET /iot/vitals/{user_id}/terbaru; bila WebSocket tidak jalan,
+ * endpoint itu dipolling sebagai fallback.
+ *
+ * Data gelang ikut memengaruhi keputusan:
+ *   - detak jantung gelang dikirim ke backend bersama vitals kamera, sehingga
+ *     skor ML (stres/kelelahan/fokus) dihitung dari detak jantung nyata
+ *     (kamera tidak lagi mengestimasi detak jantung);
+ *   - detak jantung tinggi/rendah dan SpO2 rendah memicu notifikasi.
+ *
+ * Unit ruangan (suhu, kelembapan, MQ135) datang lewat jalur yang sama dengan
+ * source = "iot_room" dan disimpan terpisah di `room`. Suhu & kelembapan bertanda
+ * suhuDummy (simulasi firmware) hanya ditampilkan, tidak dipakai keputusan.
  */
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -22,6 +46,8 @@ const PERCLOS_THRESHOLD = Number(import.meta.env.VITE_PERCLOS_THRESHOLD) || 0.4;
 const POLL_INTERVAL = 5000;
 const PUSH_INTERVAL = 2000;
 const MAX_HISTORY = 12;
+const IOT_POLL_INTERVAL = 15000; // sama dengan interval kirim gelang
+const ROOM_POLL_INTERVAL = 30000; // sama dengan interval kirim unit ruangan
 
 // State kosong — dipakai saat idle. Semua skor/vitals null.
 const EMPTY = {
@@ -88,10 +114,13 @@ function clockLabel(ts) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function vitalsBody(v) {
+function vitalsBody(v, bandReadings) {
   if (!v) return undefined;
+  // Detak jantung dari gelang (rata-rata pembacaan terbaru); bila gelang
+  // tidak aktif field ini dihilangkan dan backend memakai nilai dasarnya.
+  const band = summarizeBand(bandReadings || [], Date.now());
   return JSON.stringify({
-    heartRate: v.heartRate,
+    heartRate: band.heartRate ?? undefined,
     perclos: v.perclos,
     pupilDilation: v.pupilDilation,
     blinkRate: v.blinkRate,
@@ -104,6 +133,8 @@ function vitalsBody(v) {
 
 export function HealthProvider({ children }) {
   const { pushAlert } = useNotifications();
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [data, setData] = useState(EMPTY);
   const [history, setHistory] = useState([]);
   const [isLive, setIsLive] = useState(false);
@@ -111,9 +142,30 @@ export function HealthProvider({ children }) {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState(null);
 
+  // Data gelang IoT, dicatat bersama pemiliknya agar ganti akun tidak
+  // menampilkan data user sebelumnya.
+  const [iot, setIot] = useState({ userId: null, readings: [], error: null });
+  // Data unit ruangan, dicatat bersama pemiliknya (sama seperti gelang).
+  const [roomState, setRoomState] = useState({ userId: null, readings: [], error: null });
+
   const timer = useRef(null);
   const vitalsRef = useRef(null);
+  const bandReadingsRef = useRef([]);
   const setLiveVitals = useCallback((v) => { vitalsRef.current = v; }, []);
+
+  const addIotReading = useCallback((uid, reading) => {
+    setIot((prev) => {
+      const base = prev.userId === uid ? prev.readings : [];
+      return { userId: uid, readings: [...base, reading].slice(-IOT_HISTORY_LIMIT), error: null };
+    });
+  }, []);
+
+  const addRoomReading = useCallback((uid, reading) => {
+    setRoomState((prev) => {
+      const base = prev.userId === uid ? prev.readings : [];
+      return { userId: uid, readings: [...base, reading].slice(-ROOM_HISTORY_LIMIT), error: null };
+    });
+  }, []);
 
   // Evaluasi alert dari data nyata (hanya bila skor tersedia).
   // pushAlert stabil (useCallback []) → aman jadi dependensi.
@@ -124,6 +176,9 @@ export function HealthProvider({ children }) {
   }, [pushAlert]);
 
   useEffect(() => {
+    // Tunggu sesi login dipulihkan dulu, supaya WebSocket langsung dibuka
+    // dengan user_id yang benar (tidak buka-tutup dua kali saat start).
+    if (authLoading) return;
     let active = true;
     let socket = null;
     let pushTimer = null;
@@ -154,7 +209,7 @@ export function HealthProvider({ children }) {
     function startWebSocket() {
       return new Promise((resolve) => {
         try {
-          socket = new WebSocket(WS_URL);
+          socket = new WebSocket(wsUrlWithUser(WS_URL, userId));
         } catch (e) {
           console.warn("[HealthProvider] WebSocket gagal dibuat, fallback polling:", e?.message);
           resolve(false);
@@ -164,23 +219,39 @@ export function HealthProvider({ children }) {
         const sendVitals = () => {
           const v = vitalsRef.current;
           if (!v || socket?.readyState !== WebSocket.OPEN) return;
-          try { socket.send(vitalsBody(v)); } catch { /* reconnect via fallback */ }
+          try { socket.send(vitalsBody(v, bandReadingsRef.current)); } catch { /* reconnect via fallback */ }
         };
 
+        let opened = false;
         socket.onopen = () => {
           if (!active) { try { socket.close(); } catch { /* abaikan */ } return; }
+          opened = true;
           setTransport("websocket");
           sendVitals();
           pushTimer = setInterval(sendVitals, PUSH_INTERVAL);
           resolve(true);
         };
         socket.onmessage = (ev) => {
-          try { commit(JSON.parse(ev.data)); } catch { /* abaikan frame rusak */ }
+          try {
+            const msg = JSON.parse(ev.data);
+            // Data gelang → wearable; data ruangan → room; selain itu → alur kamera.
+            if (isRoomMessage(msg)) { if (active && userId) addRoomReading(userId, roomFromPush(msg)); }
+            else if (isIotMessage(msg)) { if (active && userId) addIotReading(userId, readingFromPush(msg)); }
+            else commit(msg);
+          } catch { /* abaikan frame rusak */ }
         };
         socket.onerror = () => {
           // Bila gagal sebelum open, resolve(false) → fallback polling.
           console.warn("[HealthProvider] WebSocket error, fallback polling");
           resolve(false);
+        };
+        // Koneksi yang sudah terbuka lalu putus (mis. backend restart) juga
+        // pindah ke polling, supaya data tidak diam-diam berhenti.
+        socket.onclose = () => {
+          if (!active || !opened) return;
+          if (pushTimer) { clearInterval(pushTimer); pushTimer = null; }
+          console.warn("[HealthProvider] WebSocket terputus, fallback polling");
+          startPolling();
         };
       });
     }
@@ -199,7 +270,7 @@ export function HealthProvider({ children }) {
           // preflight OPTIONS (yang ditolak backend). Body tetap JSON; backend
           // membaca via req.get_json() yang tak peduli Content-Type.
           headers: { Accept: "application/json", "Content-Type": "text/plain" },
-          body: vitalsBody(v),
+          body: vitalsBody(v, bandReadingsRef.current),
           signal: controller.signal,
         });
         clearTimeout(to);
@@ -229,11 +300,120 @@ export function HealthProvider({ children }) {
       if (pushTimer) clearInterval(pushTimer);
       try { socket?.close?.(); } catch { /* abaikan */ }
     };
-  }, [evaluateAlerts]);
+  }, [evaluateAlerts, userId, authLoading, addIotReading, addRoomReading]);
+
+  // Riwayat gelang dari backend: sekali saat login, lalu dipolling bila
+  // WebSocket tidak tersedia (push hanya datang lewat WebSocket).
+  useEffect(() => {
+    if (!IOT_ENABLED || !userId) return;
+    let active = true;
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        const fromServer = await fetchLatestIot(userId, { signal: controller.signal });
+        if (!active) return;
+        setIot((prev) => ({
+          userId,
+          readings: mergeReadings(fromServer, prev.userId === userId ? prev.readings : []),
+          error: null,
+        }));
+      } catch (e) {
+        if (!active || e?.name === "AbortError") return;
+        setIot((prev) => ({
+          userId,
+          readings: prev.userId === userId ? prev.readings : [],
+          error: e?.message || "fetch failed",
+        }));
+      }
+    }
+
+    load();
+    const id = transport === "websocket" ? null : setInterval(load, IOT_POLL_INTERVAL);
+    return () => {
+      active = false;
+      controller.abort();
+      if (id) clearInterval(id);
+    };
+  }, [userId, transport]);
+
+  // Pembacaan gelang milik user ini: disimpan di ref untuk dikirim ke backend,
+  // dan dievaluasi untuk notifikasi kesehatan (cooldown diatur NotificationProvider).
+  useEffect(() => {
+    const readings = iot.userId === userId ? iot.readings : [];
+    bandReadingsRef.current = readings;
+    if (!readings.length) return;
+    for (const a of bandAlerts(summarizeBand(readings, Date.now()))) pushAlert(a.type, { v: a.v });
+  }, [iot, userId, pushAlert]);
+
+  // Riwayat unit ruangan: sama seperti gelang (sekali saat login, polling bila
+  // WebSocket tidak tersedia).
+  useEffect(() => {
+    if (!IOT_ENABLED || !userId) return;
+    let active = true;
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        const fromServer = await fetchLatestRoom(userId, { signal: controller.signal });
+        if (!active) return;
+        setRoomState((prev) => ({
+          userId,
+          readings: mergeReadings(fromServer, prev.userId === userId ? prev.readings : [], ROOM_HISTORY_LIMIT),
+          error: null,
+        }));
+      } catch (e) {
+        if (!active || e?.name === "AbortError") return;
+        setRoomState((prev) => ({
+          userId,
+          readings: prev.userId === userId ? prev.readings : [],
+          error: e?.message || "fetch failed",
+        }));
+      }
+    }
+
+    load();
+    const id = transport === "websocket" ? null : setInterval(load, ROOM_POLL_INTERVAL);
+    return () => {
+      active = false;
+      controller.abort();
+      if (id) clearInterval(id);
+    };
+  }, [userId, transport]);
+
+  // Notifikasi kondisi ruangan (hanya data asli; simulasi tidak memicu notifikasi).
+  useEffect(() => {
+    const readings = roomState.userId === userId ? roomState.readings : [];
+    if (!readings.length) return;
+    for (const a of roomAlerts(summarizeRoom(readings, Date.now()))) pushAlert(a.type, { v: a.v });
+  }, [roomState, userId, pushAlert]);
+
+  const room = useMemo(() => {
+    const mine = roomState.userId === userId && userId != null;
+    const readings = mine ? roomState.readings : [];
+    return {
+      enabled: IOT_ENABLED && userId != null,
+      readings,
+      latest: readings.length ? readings[readings.length - 1] : null,
+      error: mine ? roomState.error : null,
+    };
+  }, [roomState, userId]);
+
+  const wearable = useMemo(() => {
+    const mine = iot.userId === userId && userId != null;
+    const readings = mine ? iot.readings : [];
+    return {
+      enabled: IOT_ENABLED && userId != null,
+      userId,
+      readings,
+      latest: readings.length ? readings[readings.length - 1] : null,
+      error: mine ? iot.error : null,
+    };
+  }, [iot, userId]);
 
   const value = useMemo(
-    () => ({ data, history, isLive, transport, lastUpdated, error, setLiveVitals }),
-    [data, history, isLive, transport, lastUpdated, error, setLiveVitals]
+    () => ({ data, history, isLive, transport, lastUpdated, error, setLiveVitals, wearable, room }),
+    [data, history, isLive, transport, lastUpdated, error, setLiveVitals, wearable, room]
   );
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
